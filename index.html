@@ -2,13 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Void Clash: Duel of Flagships — Visual Upgrade</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Void Clash: Duel of Flagships — v1.3</title>
 <style>
   :root{
     --fg:#eaffff;
     --accent:#00faff;
-    --accent2:#9a5cff;
     --danger:#ff4d7a;
     --good:#50ffa8;
     --bg:#04050a;
@@ -22,98 +21,113 @@
   html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 50% 30%,#0a0f1c 0%,#05060b 45%,#030409 100%);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;color:var(--fg);overflow:hidden}
   canvas{display:block;width:100vw;height:100vh;image-rendering:pixelated}
 
-  /* UI LAYER */
-  .overlay{position:fixed;inset:0;pointer-events:none}
-  .panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-  .title{font-weight:800;letter-spacing:3px;text-transform:uppercase}
-  .glow{color:var(--accent);text-shadow:0 0 12px rgba(0,250,255,.55), 0 0 28px rgba(0,180,255,.3)}
-  .sub{color:var(--muted)}
-  .btn{pointer-events:auto;appearance:none;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));color:var(--fg);padding:12px 16px;border-radius:12px;cursor:pointer;transition:.15s transform,.2s box-shadow,.2s border-color;text-align:left}
-  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.25)}
-  .btn.primary{border-color:rgba(0,250,255,.35);box-shadow:0 0 24px rgba(0,250,255,.08) inset}
-  .btn.primary:hover{box-shadow:0 0 28px rgba(0,250,255,.22) inset,0 10px 24px rgba(0,0,0,.25)}
-  .btn.danger{border-color:rgba(255,59,106,.35)}
-  .btn.small{padding:8px 10px;font-size:.9rem}
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .grow{flex:1}
-  .right{margin-left:auto}
+  /* HUD */
+  .hud{position:fixed;left:12px;right:12px;top:12px;pointer-events:none;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:flex-start}
+  .chip{pointer-events:none;background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+  .chip strong{letter-spacing:.5px}
   .badge{background:rgba(255,255,255,.06);border:1px solid var(--line);padding:2px 8px;border-radius:999px;color:var(--muted);font-size:.8rem}
-  .switch{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
-  .switch input{appearance:none;width:40px;height:22px;border-radius:999px;background:#1a2330;position:relative;outline:none;border:1px solid var(--line);transition:.2s}
-  .switch input:checked{background:#12323a;border-color:#0a606c}
-  .switch input::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:999px;background:#cde;transition:.2s}
-  .switch input:checked::after{left:20px;background:#aef}
-  .slider{pointer-events:auto;width:220px}
-  input[type="range"]{appearance:none;width:100%;height:6px;border-radius:999px;background:linear-gradient(90deg,rgba(0,250,255,.7),rgba(154,92,255,.7));outline:none}
-  input[type="range"]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid #79e5ff;box-shadow:0 0 18px rgba(0,250,255,.6)}
-  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;background:rgba(255,255,255,.06);border:1px solid var(--line);border-bottom:2px solid rgba(255,255,255,.16);padding:2px 6px;border-radius:6px}
-  .hud{position:fixed;inset:12px 12px auto 12px;pointer-events:none;display:flex;gap:12px;align-items:center}
-  .hud .chip{pointer-events:none;background:var(--panel);border:1px solid var(--line);padding:8px 12px;border-radius:12px;display:flex;align-items:center;gap:8px}
   .bar{position:relative;height:10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--line);overflow:hidden}
   .bar>i{position:absolute;inset:0;background:linear-gradient(90deg,var(--good),#9cffea,var(--accent));box-shadow:0 0 14px rgba(0,250,255,.35) inset}
   .money{color:var(--gold)}
-  .corner{position:fixed;bottom:12px;right:12px;display:flex;gap:8px}
+  .titlechip{font-weight:800;letter-spacing:3px;text-transform:uppercase}
+  .kbd{font-family:ui-monospace,Menlo,Consolas,monospace;background:rgba(255,255,255,.06);border:1px solid var(--line);border-bottom:2px solid rgba(255,255,255,.16);padding:2px 6px;border-radius:6px}
+
+  /* Bottom dock */
+  .dock{position:fixed;left:12px;right:12px;bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:center}
+  .panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.45);padding:10px}
+  .btn{pointer-events:auto;appearance:none;border:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));color:var(--fg);padding:10px 12px;border-radius:12px;cursor:pointer;transition:.15s transform,.2s box-shadow,.2s border-color;display:flex;align-items:center;gap:8px}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.25)}
+  .btn.primary{border-color:rgba(0,250,255,.35);box-shadow:0 0 24px rgba(0,250,255,.08) inset}
+  .btn.danger{border-color:rgba(255,59,106,.35)}
+  .btn.small{padding:8px 10px;font-size:.9rem}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+  .btn .price{margin-left:6px;color:var(--gold);font-weight:700}
+  .row{display:flex;gap:8px;align-items:center}
+  .grow{flex:1}
+
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;background:var(--panel-strong);border:1px solid var(--line);padding:10px 14px;border-radius:10px;opacity:0;pointer-events:none}
   .toast.show{animation:toast 2.2s ease}
   @keyframes toast{0%{opacity:0;transform:translate(-50%,10px)}10%{opacity:1;transform:translate(-50%,0)}90%{opacity:1}100%{opacity:0}}
 
-  /* Title / Menus */
-  #title,#pause,#gameover,#shop,#help{position:fixed;inset:0;display:none;align-items:center;justify-content:center}
-  #title.show,#pause.show,#gameover.show,#shop.show,#help.show{display:flex}
-  .modal{width:min(920px,92vw);padding:20px}
-  .title-head{display:flex;align-items:center;gap:12px}
-  .logo{font-size:44px;font-weight:900;letter-spacing:10px}
-  .logo .accent{color:var(--accent)}
-  .small{font-size:.9rem;color:var(--muted)}
+  /* Menus */
+  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center}
+  .overlay.show{display:flex}
+  .modal{width:min(980px,94vw);padding:20px}
+  .title{font-weight:800;letter-spacing:3px;text-transform:uppercase}
+  .glow{color:var(--accent);text-shadow:0 0 12px rgba(0,250,255,.55),0 0 28px rgba(0,180,255,.3)}
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .col-12{grid-column:span 12}
   .col-6{grid-column:span 6}
   .opt{padding:10px;border-radius:12px;border:1px dashed var(--line)}
   .list{display:flex;flex-direction:column;gap:8px}
-  .ship-card{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.02)}
-  .ship-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 14px currentColor}
-  .shop-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px}
-  .shop-item .price{margin-left:auto}
+
+  /* Responsive HUD sizing */
+  .chip,.btn{font-size:clamp(11px,1.8vw,14px)}
+  .chip .badge{font-size:clamp(10px,1.6vw,13px)}
+  @media (max-width:700px){
+    .bar{height:8px}
+  }
 </style>
 </head>
 <body>
 <canvas id="cv"></canvas>
 
 <!-- HUD -->
-<div class="hud">
-  <div class="chip"><strong>VOID CLASH</strong> <span class="badge">Duel of Flagships</span></div>
-  <div class="chip" id="hudRound">Round: <strong id="roundVal">1</strong></div>
-  <div class="chip" id="hudEnergy">
+<div class="hud" id="hud">
+  <div class="chip titlechip"><strong>VOID CLASH</strong><span class="badge">Duel of Flagships</span></div>
+  <div class="chip">Round <strong id="roundVal">1</strong></div>
+  <div class="chip">Time <strong id="timeVal">00:00</strong></div>
+  <div class="chip">
     Energy
-    <div class="bar" style="width:180px"><i id="energyFill" style="width:0%"></i></div>
+    <div class="bar" style="width:160px"><i id="energyFill" style="width:0%"></i></div>
     <span id="energyNum" class="badge">0/10</span>
   </div>
-  <div class="chip">HP
-    <div class="bar" style="width:160px"><i id="hpFill" style="width:100%"></i></div>
+  <div class="chip">
+    HP
+    <div class="bar" style="width:140px"><i id="hpFill" style="width:100%"></i></div>
     <span id="hpNum" class="badge">100%</span>
   </div>
-  <div class="chip">Enemy
-    <div class="bar" style="width:160px"><i id="ehpFill" style="width:100%"></i></div>
+  <div class="chip">
+    Enemy
+    <div class="bar" style="width:140px"><i id="ehpFill" style="width:100%"></i></div>
     <span id="ehpNum" class="badge">100%</span>
   </div>
-  <div class="chip"><span class="money">Credits: </span><strong id="moneyVal" class="money">0</strong></div>
-  <div class="chip"><span class="badge">Press <span class="kbd">1..5</span> pick · <span class="kbd">Space</span> deploy · <span class="kbd">P</span> pause</span></div>
+  <div class="chip"><span class="money">Credits:</span> <strong id="moneyVal" class="money">0</strong></div>
+  <div class="chip row" style="pointer-events:auto">
+    Speed
+    <button class="btn small" data-speed="1">1×</button>
+    <button class="btn small" data-speed="1.5">1.5×</button>
+    <button class="btn small" data-speed="2">2×</button>
+  </div>
+  <div class="chip"><span class="badge">Keys: <span class="kbd">1..5</span> pick · <span class="kbd">Space</span> deploy · <span class="kbd">P</span> pause</span></div>
 </div>
 
-<div class="corner">
-  <button class="btn small" id="btnScreenshot" title="Save screenshot">📸 Screenshot</button>
-  <button class="btn small" id="btnHelp" title="How to Play">❔ Help</button>
+<!-- Bottom dock -->
+<div class="dock">
+  <div class="panel row grow" id="deployDock">
+    <button class="btn primary" data-type="Fighter">⚔ Fighter <span class="price">2</span></button>
+    <button class="btn primary" data-type="Interceptor">⮞ Interceptor <span class="price">3</span></button>
+    <button class="btn primary" data-type="Bomber">✦ Bomber <span class="price">4</span></button>
+    <button class="btn primary" data-type="Drone">◎ Drone <span class="price">3</span></button>
+    <button class="btn primary" data-type="Frigate">⬡ Frigate <span class="price">5</span></button>
+  </div>
+  <div class="panel row" id="powersDock">
+    <button class="btn" id="powerOver"    title="Overcharge: +100% energy regen for 8s (cost 6, cd 20s)">⚡ Overcharge</button>
+    <button class="btn" id="powerShield"  title="Shield Pulse: heal +20 and shield allies near flagship (cost 5, cd 18s)">🛡 Shield</button>
+    <button class="btn" id="powerRapid"   title="Rapid Deploy: -1 energy cost for 10s (cost 4, cd 18s)">🚀 Rapid</button>
+    <button class="btn" id="powerFocus"   title="Focus Fire: +15% dmg for 10s (cost 5, cd 20s)">🎯 Focus</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<!-- TITLE -->
+<!-- Menus -->
 <div id="title" class="overlay show">
   <div class="modal panel">
-    <div class="title-head row" style="margin-bottom:10px">
-      <div class="logo glow">VOID <span class="accent">CLASH</span></div>
-      <span class="badge">v1.0 (single-file)</span>
-      <span class="right small">HTML5 · Canvas · No libs</span>
+    <div class="row" style="align-items:center;gap:12px;margin-bottom:10px">
+      <div class="title glow">VOID CLASH</div>
+      <span class="badge">v1.3 (single-file)</span>
+      <span class="badge" style="margin-left:auto">HTML5 • Canvas • No libs</span>
     </div>
     <div class="grid">
       <div class="col-12">
@@ -125,155 +139,140 @@
           </div>
         </div>
       </div>
-
       <div class="col-6">
         <div class="opt">
           <div class="title">Options</div>
           <div class="list" style="margin-top:8px">
-            <label class="switch">Particles <input id="optParticles" type="checkbox" checked></label>
-            <label class="switch">Chromatic Bloom <input id="optBloom" type="checkbox" checked></label>
-            <label class="switch">Screen Shake <input id="optShake" type="checkbox" checked></label>
-            <label class="switch">SFX <input id="optSfx" type="checkbox" checked></label>
-            <div>Difficulty
-              <div class="row" style="margin-top:6px">
-                <button class="btn small" data-diff="0">Easy</button>
-                <button class="btn small primary" data-diff="1">Normal</button>
-                <button class="btn small danger" data-diff="2">Hard</button>
-              </div>
+            <label>Particles <input id="optParticles" type="checkbox" checked></label>
+            <label>Bloom <input id="optBloom" type="checkbox" checked></label>
+            <label>Screen Shake <input id="optShake" type="checkbox" checked></label>
+            <label>SFX <input id="optSfx" type="checkbox" checked></label>
+            <div>Difficulty</div>
+            <div class="row" style="margin-top:6px">
+              <button class="btn small" data-diff="0">Easy</button>
+              <button class="btn small" data-diff="1">Normal</button>
+              <button class="btn small danger" data-diff="2">Hard</button>
             </div>
             <div class="row" style="align-items:center">
-              <span class="small">Master Volume</span>
-              <input id="optVol" class="slider" type="range" min="0" max="1" step="0.01" value="0.6"/>
+              <span>Master Vol</span>
+              <input id="optVol" type="range" min="0" max="1" step="0.01" value="0.6" style="width:220px"/>
             </div>
           </div>
         </div>
       </div>
-
       <div class="col-6">
         <div class="opt">
           <div class="title">Fleet Roster</div>
           <div class="list" style="margin-top:8px">
-            <div class="ship-card">
-              <span class="ship-dot" style="background:#51d9ff"></span>
-              <div><strong>Fighter</strong><br/><small>Cheap, fast, good vs bombers.</small></div>
-              <span class="badge right">Cost 2</span>
-            </div>
-            <div class="ship-card">
-              <span class="ship-dot" style="background:#6a8bff"></span>
-              <div><strong>Interceptor</strong><br/><small>Arrowhead hunter; counters Bomber/Frigate.</small></div>
-              <span class="badge right">Cost 3</span>
-            </div>
-            <div class="ship-card">
-              <span class="ship-dot" style="background:#8be0ff"></span>
-              <div><strong>Bomber</strong><br/><small>Heavy chevron; huge flagship damage.</small></div>
-              <span class="badge right">Cost 4</span>
-            </div>
-            <div class="ship-card">
-              <span class="ship-dot" style="background:#50ffa8"></span>
-              <div><strong>Support Drone</strong><br/><small>Orb shield aura; heals allies.</small></div>
-              <span class="badge right">Cost 3</span>
-            </div>
-            <div class="ship-card">
-              <span class="ship-dot" style="background:#ffd36b"></span>
-              <div><strong>Missile Frigate</strong><br/><small>Hex hull; long-range pods.</small></div>
-              <span class="badge right">Cost 5</span>
-            </div>
+            <div>⚔ Fighter — Cheap, counters Bombers.</div>
+            <div>⮞ Interceptor — Counters Bomber/Frigate.</div>
+            <div>✦ Bomber — Big flagship damage, slow.</div>
+            <div>◎ Drone — Aura heal.</div>
+            <div>⬡ Frigate — Long-range missiles.</div>
           </div>
         </div>
       </div>
-
-      <div class="col-12">
-        <div class="small">Tip: Fast heuristic AI today; swap-in Minimax later without changing UI.</div>
-      </div>
+      <div class="col-12"><div class="badge">Tip: Live powers at the bottom can swing fights.</div></div>
     </div>
   </div>
 </div>
 
-<!-- HELP -->
 <div id="help" class="overlay">
   <div class="modal panel">
-    <div class="title-head" style="margin-bottom:10px">
+    <div class="row" style="align-items:center">
       <div class="title glow">How to Play</div>
-      <span class="right"><button class="btn small" id="closeHelp">Close</button></span>
+      <button id="closeHelp" class="btn small" style="margin-left:auto">Close</button>
     </div>
     <div class="grid">
       <div class="col-6">
         <div class="opt">
           <strong>Objective</strong>
-          <div class="small">Reduce the enemy flagship to 0 HP. Deploy with Energy; ships auto-fight.</div>
-          <div style="height:8px"></div>
+          <div class="muted">Reduce the enemy flagship to 0 HP.</div>
           <strong>Controls</strong>
-          <div class="small">
-            <div>• <span class="kbd">1..5</span> select ship</div>
-            <div>• <span class="kbd">Space</span> deploy</div>
-            <div>• <span class="kbd">P</span> pause</div>
-            <div>• <span class="kbd">H</span> help</div>
-          </div>
+          <div>1..5 select ship • Space deploy • P pause • Click bottom buttons to deploy & use powers.</div>
         </div>
       </div>
       <div class="col-6">
         <div class="opt">
           <strong>Synergies</strong>
-          <div class="small">Fighter > Bomber; Interceptor > Bomber/Frigate; Drones heal; escort Bombers.</div>
+          <div>Fighter > Bomber • Interceptor > Bomber/Frigate • Drones heal • Escort Bombers.</div>
+          <strong>Upgrades</strong>
+          <div>Damage • HP • Regen • Speed + new special upgrades in Shop.</div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- SHOP -->
 <div id="shop" class="overlay">
   <div class="modal panel">
-    <div class="title-head" style="margin-bottom:10px">
+    <div class="row" style="align-items:center">
       <div class="title glow">Fleet Upgrades</div>
-      <span class="right small">Credits: <span id="shopCredits" class="money">0</span></span>
+      <div class="badge" style="margin-left:auto">Credits: <span id="shopCredits" class="money">0</span></div>
     </div>
     <div class="grid">
       <div class="col-6">
         <div class="list">
-          <div class="shop-item">
-            <div><strong>⚔ Damage Matrix</strong><br/><small>+10% global damage</small></div>
-            <span class="badge price">120</span>
-            <button class="btn small right buy" data-upg="dmg">Buy</button>
+          <!-- Core -->
+          <div class="row panel">
+            <div class="grow"><strong>⚔ Damage Matrix</strong><br/><small>+10% global damage</small></div>
+            <span class="badge">120</span><button class="btn small buy" data-upg="dmg">Buy</button>
           </div>
-          <div class="shop-item">
-            <div><strong>🛡 Shield Lattice</strong><br/><small>+12% max HP</small></div>
-            <span class="badge price">120</span>
-            <button class="btn small right buy" data-upg="hp">Buy</button>
+          <div class="row panel">
+            <div class="grow"><strong>🛡 Shield Lattice</strong><br/><small>+12% max HP</small></div>
+            <span class="badge">120</span><button class="btn small buy" data-upg="hp">Buy</button>
           </div>
-          <div class="shop-item">
-            <div><strong>⚡ Reactor Overdrive</strong><br/><small>+15% energy regen</small></div>
-            <span class="badge price">140</span>
-            <button class="btn small right buy" data-upg="erg">Buy</button>
+          <div class="row panel">
+            <div class="grow"><strong>⚡ Reactor Overdrive</strong><br/><small>+15% energy regen</small></div>
+            <span class="badge">140</span><button class="btn small buy" data-upg="erg">Buy</button>
           </div>
-          <div class="shop-item">
-            <div><strong>🛞 Thruster Suite</strong><br/><small>+10% ship speed</small></div>
-            <span class="badge price">100</span>
-            <button class="btn small right buy" data-upg="spd">Buy</button>
+          <div class="row panel">
+            <div class="grow"><strong>🛞 Thruster Suite</strong><br/><small>+10% ship speed</small></div>
+            <span class="badge">100</span><button class="btn small buy" data-upg="spd">Buy</button>
+          </div>
+          <!-- New Specials -->
+          <div class="row panel">
+            <div class="grow"><strong>🎯 Ballistics</strong><br/><small>+15% projectile speed</small></div>
+            <span class="badge">90</span><button class="btn small buy" data-upg="vel">Buy</button>
+          </div>
+          <div class="row panel">
+            <div class="grow"><strong>🧨 Pierce Rounds</strong><br/><small>+8% dmg, 5% chance to pierce</small></div>
+            <span class="badge">140</span><button class="btn small buy" data-upg="prc">Buy</button>
+          </div>
+          <div class="row panel">
+            <div class="grow"><strong>🛰 Drone Mesh++</strong><br/><small>Drone aura +30% stronger</small></div>
+            <span class="badge">120</span><button class="btn small buy" data-upg="drn">Buy</button>
+          </div>
+          <div class="row panel">
+            <div class="grow"><strong>💰 Kill Dividend</strong><br/><small>+6 credits per enemy ship kill</small></div>
+            <span class="badge">100</span><button class="btn small buy" data-upg="kcr">Buy</button>
+          </div>
+          <div class="row panel">
+            <div class="grow"><strong>🔫 Flagship Turret</strong><br/><small>Your flagship fires occasionally</small></div>
+            <span class="badge">180</span><button class="btn small buy" data-upg="tur">Buy</button>
           </div>
         </div>
       </div>
       <div class="col-6">
         <div class="panel" style="padding:12px;height:100%">
           <div class="title">Loadout</div>
-          <div class="small" id="loadoutText">Base modifiers: none.</div>
-          <div class="list" style="margin-top:10px">
+          <div class="list small" id="loadoutText">Base modifiers: none.</div>
+          <div class="row" style="margin-top:10px">
             <button class="btn primary" id="continueBtn">Continue</button>
             <button class="btn" id="backToTitleBtn">Back to Title</button>
           </div>
+          <div class="badge" style="margin-top:8px">Purchases stack and persist during this session.</div>
         </div>
       </div>
-      <div class="col-12 small">Purchases stack multiplicatively and persist across this session.</div>
     </div>
   </div>
 </div>
 
-<!-- PAUSE -->
 <div id="pause" class="overlay">
   <div class="modal panel">
-    <div class="title-head">
+    <div class="row" style="align-items:center">
       <div class="title glow">Paused</div>
-      <span class="right"><button id="resumeBtn" class="btn small primary">Resume</button></span>
+      <button id="resumeBtn" class="btn small primary" style="margin-left:auto">Resume</button>
     </div>
     <div class="row">
       <button id="restartBtn" class="btn">↺ Restart Round</button>
@@ -282,10 +281,9 @@
   </div>
 </div>
 
-<!-- GAME OVER -->
 <div id="gameover" class="overlay">
   <div class="modal panel">
-    <div class="title-head"><div class="title glow">Battle Complete</div></div>
+    <div class="title glow">Battle Complete</div>
     <div class="grid">
       <div class="col-6">
         <div class="opt">
@@ -305,53 +303,66 @@
 </div>
 
 <script>
-/* ===========================================================
-   VOID CLASH — Single-File Build (enhanced visuals)
-   =========================================================== */
 (() => {
   "use strict";
 
-  // Helpers
+  /* =========================
+     Helpers
+  ========================= */
   const clamp = (v,min,max)=>v<min?min:(v>max?max:v);
   const rand = (a,b)=>Math.random()*(b-a)+a;
+  const randi = (a,b)=>Math.floor(rand(a,b));
   const now = ()=>performance.now();
   const TAU = Math.PI*2;
 
-  // Canvas
+  /* =========================
+     Canvas
+  ========================= */
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d');
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-  function resize(){ cv.width = Math.floor(window.innerWidth * DPR); cv.height = Math.floor(window.innerHeight * DPR); }
-  window.addEventListener('resize', resize); resize();
+  function resize(){ cv.width=Math.floor(window.innerWidth*DPR); cv.height=Math.floor(window.innerHeight*DPR); }
+  window.addEventListener('resize', ()=>{ resize(); seedStars(); positionFlagships(); fitHUD(); });
+  resize();
 
-  // Audio
-  let masterVol = 0.6, audioCtx = null;
-  function initAudio(){ if(audioCtx) return; try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } }
+  /* =========================
+     Audio (tiny beeps)
+  ========================= */
+  let masterVol = 0.6, audioCtx=null;
+  function initAudio(){ if(audioCtx) return; try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx=null; } }
   function beep(freq=440, dur=0.08, gain=0.08){
     if(!audioCtx || !Settings.sfx) return;
     const t = audioCtx.currentTime;
-    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
-    o.type='square'; o.frequency.value=freq; g.gain.value=gain*masterVol; o.connect(g).connect(audioCtx.destination);
-    o.start(t); o.stop(t+dur);
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type='square'; o.frequency.value=freq; g.gain.value=gain*masterVol;
+    o.connect(g).connect(audioCtx.destination); o.start(t); o.stop(t+dur);
   }
-  // small helper for contact SFX
-  function sfxHit(){ beep(280,0.04,0.05); }
 
-  // Settings / State
+  /* =========================
+     Game State
+  ========================= */
   const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
-  const Player = { hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.2, credits:0, upgrades:{dmg:0,hp:0,erg:0,spd:0} };
-  const Enemy  = { hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.15, difficultyBias:1.0 };
+  const Player = {
+    hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.4,
+    credits:0,
+    upgrades:{ dmg:0,hp:0,erg:0,spd:0, vel:0, prc:0, drn:0, kcr:0, tur:0 }
+  };
+  const Enemy  = { hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.18, difficultyBias:1.0 };
   let Round=1, paused=false, inBattle=false, gameOver=false;
+  let speedMult = 1;
+  let roundTime=0;
 
   function applyDifficulty(){
-    if(Settings.difficulty===0){ Enemy.energyRegen=1.0;  Enemy.difficultyBias=0.9;  Player.hpMax=1100; }
-    else if(Settings.difficulty===1){ Enemy.energyRegen=1.15; Enemy.difficultyBias=1.0; Player.hpMax=1000; }
-    else{ Enemy.energyRegen=1.3; Enemy.difficultyBias=1.15; Player.hpMax=950; }
+    if(Settings.difficulty===0){ Enemy.energyRegen=1.05; Enemy.difficultyBias=0.92; Player.hpMax=1100; }
+    else if(Settings.difficulty===1){ Enemy.energyRegen=1.18; Enemy.difficultyBias=1.0; Player.hpMax=1000; }
+    else { Enemy.energyRegen=1.35; Enemy.difficultyBias=1.12; Player.hpMax=950; }
     Player.hp=Player.hpMax; Enemy.hpMax=Player.hpMax; Enemy.hp=Enemy.hpMax;
   }
   applyDifficulty();
 
-  // Background
+  /* =========================
+     Background
+  ========================= */
   const starsFar=[], starsNear=[];
   function seedStars(){
     starsFar.length=0; starsNear.length=0;
@@ -360,33 +371,39 @@
     for(let i=0;i<nFar;i++) starsFar.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:rand(0.4,1.2),s:rand(0.02,0.06)});
     for(let i=0;i<nNear;i++) starsNear.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:rand(0.8,2.2),s:rand(0.06,0.16)});
   }
-  seedStars(); window.addEventListener('resize', seedStars);
+  seedStars();
 
   function drawBackground(dt){
-    const g=ctx.createRadialGradient(cv.width*0.5, cv.height*0.35, 80, cv.width*0.5, cv.height*0.5, Math.max(cv.width,cv.height)*0.9);
-    g.addColorStop(0,"rgba(0,200,255,0.08)"); g.addColorStop(0.45,"rgba(120,50,255,0.06)"); g.addColorStop(1,"rgba(0,0,0,0.0)");
+    const g=ctx.createRadialGradient(cv.width*0.5, cv.height*0.5, 60, cv.width*0.5, cv.height*0.5, Math.max(cv.width,cv.height)*0.9);
+    g.addColorStop(0,"rgba(0,200,255,0.07)"); g.addColorStop(0.55,"rgba(120,50,255,0.05)"); g.addColorStop(1,"rgba(0,0,0,0.0)");
     ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
 
     ctx.globalCompositeOperation='lighter'; ctx.fillStyle="#ffffff";
-    for(const s of starsFar){ s.y+=s.s*dt*60; if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; } ctx.globalAlpha=0.4; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
-    for(const s of starsNear){ s.y+=s.s*dt*60; if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; } ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
+    for(const s of starsFar){ s.x+=s.s*dt*30; if(s.x>cv.width){ s.x=0; s.y=Math.random()*cv.height; } ctx.globalAlpha=0.4; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
+    for(const s of starsNear){ s.x+=s.s*dt*60; if(s.x>cv.width){ s.x=0; s.y=Math.random()*cv.height; } ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
     ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
   }
 
-  // Particles
+  /* =========================
+     Particles
+  ========================= */
   const particles=[];
   function spawnSpark(x,y,c="#aef",n=6,spd=1){ if(!Settings.particles) return; for(let i=0;i<n;i++) particles.push({x,y,vx:rand(-1,1)*spd,vy:rand(-1,1)*spd,life:rand(0.4,0.9),t:0,c}); }
-  function thruster(x,y,dx,dy,c="#aef",n=2){ if(!Settings.particles) return; for(let i=0;i<n;i++) particles.push({x:x+dx*2,y:y+dy*2,vx:dx*rand(-0.2,0.2),vy:dy*rand(0.8,1.4),life:rand(0.2,0.5),t:0,c}); }
-  function particleUpdate(dt){ for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.t+=dt; p.x+=p.vx*dt*60; p.y+=p.vy*dt*60; p.vy+=0.02*dt*60; if(p.t>p.life) particles.splice(i,1); } }
+  function thruster(x,y,dx,dy,c="#aef",n=2){ if(!Settings.particles) return; for(let i=0;i<n;i++) particles.push({x:x-dx*2,y:y-dy*2,vx:-dx*rand(0.2,0.6),vy:-dy*rand(0.2,0.6),life:rand(0.25,0.5),t:0,c}); }
+  function particleUpdate(dt){ for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.t+=dt; p.x+=p.vx*dt*60; p.y+=p.vy*dt*60; if(p.t>p.life) particles.splice(i,1); } }
   function particleDraw(){ if(!Settings.particles) return; ctx.globalCompositeOperation='lighter'; for(const p of particles){ const a=1-(p.t/p.life); ctx.globalAlpha=a; ctx.fillStyle=p.c; ctx.fillRect(p.x-1,p.y-1,2,2);} ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; }
 
-  // Camera & Shake
+  /* =========================
+     Camera & Shake
+  ========================= */
   const Cam={shake:0};
   function addShake(s=6){ if(Settings.shake) Cam.shake=Math.min(12,Cam.shake+s); }
-  function applyCamera(){ let sx=0,sy=0; if(Cam.shake>0){ sx=rand(-Cam.shake,Cam.shake); sy=rand(-Cam.shake,Cam.shake); Cam.shake*=0.9; if(Cam.shake<0.2) Cam.shake=0; } ctx.setTransform(1,0,0,1,sx,sy); }
+  function applyCamera(){ let sx=0,sy=0; if(Cam.shake>0){ sx=rand(-Cam.shake,Cam.shake); sy=rand(-Cam.shake,Cam.shake); Cam.shake*=0.9; if(Cam.shake<0.2) Cam.shake=0;} ctx.setTransform(1,0,0,1,sx,sy); }
   function resetCamera(){ ctx.setTransform(1,0,0,1,0,0); }
 
-  // Entities
+  /* =========================
+     Entities
+  ========================= */
   const bullets=[], ships=[];
   const TEAM={PLAYER:1, ENEMY:2};
   const TEAM_COLOR = (team)=> team===TEAM.PLAYER ? '#51d9ff' : '#ff4d7a';
@@ -394,622 +411,604 @@
   const TYPE_ACCENT = { Fighter:"#70d7ff", Interceptor:"#6a8bff", Bomber:"#8be0ff", Drone:"#50ffa8", Frigate:"#ffd36b" };
 
   const BASE_STATS = {
-    Fighter:     { hp:36,  dmg:9,  spd:1.65, rof:0.58, cost:2, range:92  },
-    Interceptor: { hp:44,  dmg:8,  spd:2.00, rof:0.50, cost:3, range:102 },
-    Bomber:      { hp:96,  dmg:28, spd:1.00, rof:1.20, cost:4, range:70  },
-    Drone:       { hp:52,  dmg:0,  spd:1.25, rof:1.40, cost:3, range:0   },
-    Frigate:     { hp:72,  dmg:16, spd:1.20, rof:0.78, cost:5, range:185 },
+    Fighter:     { hp:40, dmg:9,  spd:1.75, rof:0.58, cost:2, range:140 },
+    Interceptor: { hp:48, dmg:8,  spd:2.10, rof:0.50, cost:3, range:150 },
+    Bomber:      { hp:110,dmg:30, spd:1.02, rof:1.25, cost:4, range:120 },
+    Drone:       { hp:56, dmg:0,  spd:1.30, rof:1.40, cost:3, range:0   },
+    Frigate:     { hp:80, dmg:18, spd:1.25, rof:0.78, cost:5, range:220 },
   };
+  const ORDER = ['Fighter','Interceptor','Bomber','Drone','Frigate'];
+  let Selected='Fighter';
 
-  const Selected={type:'Fighter'};
-  const ORDER=['Fighter','Interceptor','Bomber','Drone','Frigate'];
+  const Flagship={ p:{x:110,y:0,w:28,h:200,team:TEAM.PLAYER}, e:{x:0,y:0,w:28,h:200,team:TEAM.ENEMY} };
+  function positionFlagships(){ Flagship.p.x=110; Flagship.e.x=cv.width-110; Flagship.p.y=Flagship.e.y=cv.height*0.5; Flagship.p.w=Flagship.e.w=28; Flagship.p.h=Flagship.e.h=Math.min(240, Math.max(160, cv.height*0.35)); }
+  positionFlagships();
 
-  const Flagship={ p:{x:cv.width*0.5,y:cv.height-110,w:200,h:28,team:TEAM.PLAYER}, e:{x:cv.width*0.5,y:110,w:200,h:28,team:TEAM.ENEMY} };
-  window.addEventListener('resize', ()=>{ Flagship.p.x=cv.width*0.5; Flagship.e.x=cv.width*0.5; Flagship.p.y=cv.height-110; Flagship.e.y=110; });
+  /* =========================
+     Drawing
+  ========================= */
+  function drawFlagship(fs, hpRatio, color){
+    const rx = fs.x - fs.w*0.5, ry = fs.y - fs.h*0.5;
+    // glow pad
+    if (Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle=color; ctx.fillRect(rx-12, ry-8, fs.w+24, fs.h+16); ctx.globalAlpha=1; }
+    // hull wedge (player points right, enemy left)
+    const pointRight = (fs === Flagship.p);
+    ctx.strokeStyle=color; ctx.lineWidth=3*DPR;
+    ctx.beginPath();
+    if(pointRight){ ctx.moveTo(rx,ry); ctx.lineTo(rx+fs.w,ry+fs.h*0.15); ctx.lineTo(rx+fs.w,ry+fs.h*0.85); ctx.lineTo(rx,ry+fs.h); }
+    else { ctx.moveTo(rx+fs.w,ry); ctx.lineTo(rx,ry+fs.h*0.15); ctx.lineTo(rx,ry+fs.h*0.85); ctx.lineTo(rx+fs.w,ry+fs.h); }
+    ctx.closePath(); ctx.stroke();
 
-  function teamMult(t){ return t===TEAM.PLAYER?1:-1; }
+    // side engine glow
+    ctx.globalAlpha=0.4; ctx.fillStyle=color;
+    if(pointRight) ctx.fillRect(rx-12, ry+fs.h*0.25, 10, fs.h*0.5);
+    else ctx.fillRect(rx+fs.w+2, ry+fs.h*0.25, 10, fs.h*0.5);
+    ctx.globalAlpha=1;
+
+    // vertical HP bar beside hull
+    const hpH = fs.h * clamp(hpRatio,0,1);
+    ctx.fillStyle="rgba(255,255,255,.06)";
+    if(pointRight){ ctx.fillRect(rx-8, ry, 6, fs.h); ctx.fillStyle=color; ctx.fillRect(rx-8, ry+(fs.h-hpH), 6, hpH); }
+    else { ctx.fillRect(rx+fs.w+2, ry, 6, fs.h); ctx.fillStyle=color; ctx.fillRect(rx+fs.w+2, ry+(fs.h-hpH), 6, hpH); }
+  }
+
+  function drawShipBody(s){
+    const stroke=TEAM_COLOR(s.team), glow=TEAM_GLOW(s.team), accent=TYPE_ACCENT[s.type]||stroke;
+    const faceRight = (s.team === TEAM.PLAYER);
+
+    // soft glow halo
+    if (Settings.bloom){ ctx.globalAlpha=0.25; ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(s.x, s.y, 16, 0, TAU); ctx.fill(); ctx.globalAlpha=1; }
+    ctx.lineWidth=2*DPR; ctx.strokeStyle=stroke;
+
+    const tri = (len=18, halfW=9)=>{
+      ctx.beginPath();
+      if (faceRight){ ctx.moveTo(s.x+len, s.y); ctx.lineTo(s.x-len*0.6, s.y-halfW); ctx.lineTo(s.x-len*0.6, s.y+halfW); }
+      else { ctx.moveTo(s.x-len, s.y); ctx.lineTo(s.x+len*0.6, s.y-halfW); ctx.lineTo(s.x+len*0.6, s.y+halfW); }
+      ctx.closePath(); ctx.stroke();
+    };
+
+    switch(s.type){
+      case 'Fighter':{
+        tri(18,9);
+        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR;
+        ctx.beginPath();
+        if (faceRight){ ctx.moveTo(s.x-8, s.y); ctx.lineTo(s.x+12, s.y); }
+        else { ctx.moveTo(s.x+8, s.y); ctx.lineTo(s.x-12, s.y); }
+        ctx.stroke(); break;
+      }
+      case 'Interceptor':{
+        const a=12;
+        ctx.beginPath();
+        if(faceRight){ ctx.moveTo(s.x+a,s.y); ctx.lineTo(s.x,s.y-a); ctx.lineTo(s.x-a,s.y); ctx.lineTo(s.x,s.y+a); }
+        else { ctx.moveTo(s.x-a,s.y); ctx.lineTo(s.x,s.y-a); ctx.lineTo(s.x+a,s.y); ctx.lineTo(s.x,s.y+a); }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.beginPath();
+        if(faceRight){ ctx.moveTo(s.x-12,s.y); ctx.lineTo(s.x-18,s.y-6); ctx.moveTo(s.x-12,s.y); ctx.lineTo(s.x-18,s.y+6); }
+        else { ctx.moveTo(s.x+12,s.y); ctx.lineTo(s.x+18,s.y-6); ctx.moveTo(s.x+12,s.y); ctx.lineTo(s.x+18,s.y+6); }
+        ctx.stroke(); break;
+      }
+      case 'Bomber':{
+        ctx.beginPath();
+        if(faceRight){ ctx.moveTo(s.x-16,s.y-9); ctx.lineTo(s.x+16,s.y); ctx.lineTo(s.x-16,s.y+9); }
+        else { ctx.moveTo(s.x+16,s.y-9); ctx.lineTo(s.x-16,s.y); ctx.lineTo(s.x+16,s.y+9); }
+        ctx.stroke();
+        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR; ctx.beginPath();
+        if(faceRight){ ctx.moveTo(s.x-6,s.y-6); ctx.lineTo(s.x-6,s.y+6); }
+        else { ctx.moveTo(s.x+6,s.y-6); ctx.lineTo(s.x+6,s.y+6); }
+        ctx.stroke(); break;
+      }
+      case 'Drone':{
+        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, TAU); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.globalAlpha=0.8; ctx.beginPath(); ctx.ellipse(s.x, s.y, 13, 6, 0, 0, TAU); ctx.stroke(); ctx.globalAlpha=1;
+        break;
+      }
+      case 'Frigate':{
+        const r=12, rot = faceRight?0:Math.PI;
+        ctx.beginPath();
+        for(let i=0;i<6;i++){ const ang = rot + Math.PI/6 + i*TAU/6; const px=s.x+Math.cos(ang)*r, py=s.y+Math.sin(ang)*r; if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.beginPath();
+        if(faceRight){ ctx.moveTo(s.x+10,s.y-6); ctx.lineTo(s.x+16,s.y-10); ctx.moveTo(s.x+10,s.y+6); ctx.lineTo(s.x+16,s.y+10); }
+        else { ctx.moveTo(s.x-10,s.y-6); ctx.lineTo(s.x-16,s.y-10); ctx.moveTo(s.x-10,s.y+6); ctx.lineTo(s.x-16,s.y+10); }
+        ctx.stroke(); break;
+      }
+    }
+
+    // HP
+    const w=24,h=4; ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(s.x-w/2, s.y-18, w, h);
+    ctx.fillStyle=stroke; ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
+  }
+
+  /* =========================
+     Physics & Combat
+  ========================= */
+  function collideRectCircle(rx,ry,rw,rh,cx,cy,cr){
+    const tx=clamp(cx,rx,rx+rw), ty=clamp(cy,ry,ry+rh); const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr;
+  }
 
   function makeShip(type,team){
     const b=BASE_STATS[type];
     const hpUp=1+Player.upgrades.hp*0.12, dmgUp=1+Player.upgrades.dmg*0.10, spdUp=1+Player.upgrades.spd*0.10;
     const s={ type, team,
-      x: team===TEAM.PLAYER ? Flagship.p.x+rand(-60,60) : Flagship.e.x+rand(-60,60),
-      y: team===TEAM.PLAYER ? Flagship.p.y-46 : Flagship.e.y+46,
-      vx:0, vy:-b.spd*teamMult(team)*spdUp,
+      x: team===TEAM.PLAYER ? (Flagship.p.x + 46) : (Flagship.e.x - 46),
+      y: team===TEAM.PLAYER ? (Flagship.p.y + rand(-60,60)) : (Flagship.e.y + rand(-60,60)),
+      baseY:0, t:rand(0,1000),
+      vx: b.spd * (team===TEAM.PLAYER? +1 : -1) * spdUp * 60, // px/sec
+      vy: 0,
       hp:Math.floor(b.hp*hpUp), hpMax:Math.floor(b.hp*hpUp),
-      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range
+      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range,
+      blocked:false, unblockBoost:0
     };
-    ships.push(s); spawnSpark(s.x,s.y,TEAM_COLOR(team),10,1.3); beep(team===TEAM.PLAYER?540:500,0.05,0.05); return s;
+    s.baseY=s.y;
+    ships.push(s);
+    spawnSpark(s.x,s.y,TEAM_COLOR(team),10,1.3); beep(team===TEAM.PLAYER?540:500,0.05,0.05);
+    return s;
   }
 
-  function fireBullet(from,tx,ty,speed=4.6,dmg=null){
-    const a=Math.atan2(ty-from.y, tx-from.x), v=speed, d=(dmg==null?from.dmg:dmg);
+  function fireBullet(from,tx,ty,speed=5,dmg=null){
+    const velUp = 1 + Player.upgrades.vel*0.15;
+    const a=Math.atan2(ty-from.y, tx-from.x), v=speed*velUp, d=(dmg==null?from.dmg:dmg);
     bullets.push({x:from.x,y:from.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,team:from.team,dmg:d,life:2.5});
     spawnSpark(from.x,from.y,TEAM_COLOR(from.team),4,0.7); beep(from.team===TEAM.PLAYER?820:700,0.04,0.035);
   }
 
-  function collideRectCircle(rx,ry,rw,rh,cx,cy,cr){
-    const tx=clamp(cx,rx,rx+rw), ty=clamp(cy,ry,ry+rh), dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr;
-  }
-
   function shipUpdate(dt){
+    const sepForce = 18; // separation strength when overlapping enemy
     for(let i=ships.length-1;i>=0;i--){
-      const s=ships[i]; s.y+=s.vy*dt*60;
+      const s=ships[i];
 
-      if(s.type==='Drone'){
-        for(const t of ships){ if(t.team===s.team && t!==s){ const dy=Math.abs(t.y-s.y), dx=Math.abs(t.x-s.x); if(dy<84 && dx<84 && t.hp>0) t.hp=Math.min(t.hpMax, t.hp+6*dt);} }
-        thruster(s.x, s.y+(s.team===TEAM.PLAYER?10:-10), 0, 0.7*(s.team===TEAM.PLAYER?1:-1), TEAM_COLOR(s.team), 1);
+      // organic sway
+      s.t += dt;
+      const sway = Math.sin(s.t* (1.5 + (s.type==='Interceptor'?0.6:0)) ) * (s.type==='Bomber'?2.4:3.4);
+      s.y = s.baseY + sway;
+
+      // move along X
+      let speed = s.vx;
+      if(s.unblockBoost>0){ speed *= 1.45; s.unblockBoost -= dt; }
+      s.x += speed * dt;
+
+      // thrusters
+      const back = (s.team===TEAM.PLAYER? -1 : +1);
+      thruster(s.x + back*9, s.y, back*1.2, 0, TEAM_COLOR(s.team), 1);
+
+      // target select
+      s.cd-=dt;
+      let tg=null, best=Infinity;
+      for(const o of ships){ if(o.team!==s.team){ const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy; if(d<best){ best=d; tg=o; } } }
+      const fs=(s.team===TEAM.PLAYER?Flagship.e:Flagship.p);
+      const tx=tg?tg.x:fs.x, ty=tg?tg.y:fs.y;
+
+      // fire
+      if(s.type!=='Drone'){
+        const dx=Math.abs(tx-s.x);
+        if(dx<s.range && s.cd<=0){
+          s.cd=s.rof;
+          const spd = (s.type==='Frigate'? 6.0 : (s.type==='Bomber'?4.2:5.6));
+          fireBullet(s,tx,ty,spd);
+        }
       }else{
-        thruster(s.x, s.y+(s.team===TEAM.PLAYER?10:-10), 0, 0.5*(s.team===TEAM.PLAYER?1:-1), TEAM_COLOR(s.team), 1);
+        // Drone heal aura
+        const aura = 84 * (1 + Player.upgrades.drn*0.3);
+        for(const t of ships){ if(t.team===s.team && t!==s){ const dy=Math.abs(t.y-s.y), dx=Math.abs(t.x-s.x); if(dy<aura && dx<aura && t.hp>0){ t.hp = Math.min(t.hpMax, t.hp + (6 + Player.upgrades.drn*2)*dt); } } }
       }
 
-      s.cd-=dt; let tg=null, bestD=Infinity;
-      for(const o of ships){ if(o.team!==s.team){ const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy; if(d<bestD){bestD=d; tg=o;} } }
-      const fs=(s.team===TEAM.PLAYER?Flagship.e:Flagship.p); const tx=tg?tg.x:fs.x, ty=tg?tg.y:fs.y;
-      if(s.type!=='Drone'){ const dy=Math.abs(ty-s.y); if(dy<s.range && s.cd<=0){ s.cd=s.rof; fireBullet(s,tx,ty, s.type==='Frigate'?5.6:(s.type==='Bomber'?3.9:5.2)); } }
+      // contact with enemy front-lines (DPS bleed + stall)
+      s.blocked = false;
+      for(const o of ships){
+        if(o.team===s.team || o===s) continue;
+        if(Math.abs(o.x - s.x) < 18 && Math.abs(o.y - s.y) < 26){
+          s.blocked = true;
+          const dpsA = Math.max(6, (s.dmg/Math.max(0.4,s.rof))*0.55);
+          const dpsB = Math.max(6, (o.dmg/Math.max(0.4,o.rof))*0.55);
+          s.hp -= dpsB*dt; o.hp -= dpsA*dt;
+          // slow + gently push apart
+          s.x += (s.team===TEAM.PLAYER? -sepForce: +sepForce)*dt;
+          o.x += (o.team===TEAM.PLAYER? -sepForce: +sepForce)*dt;
+        }
+      }
 
-      if(s.hp<=0 || s.y<-60 || s.y>cv.height+60){ if(s.hp<=0){ spawnSpark(s.x,s.y,TEAM_COLOR(s.team),16,1.8); addShake(3.5); beep(160,0.06,0.06);} ships.splice(i,1); }
+      // unblock surge when previously blocked but now clear
+      if(!s.blocked && s.prevBlocked) s.unblockBoost = 0.6;
+      s.prevBlocked = s.blocked;
+
+      // offscreen/dead
+      if(s.hp<=0 || s.x<-80 || s.x>cv.width+80){
+        if(s.hp<=0){
+          spawnSpark(s.x,s.y,TEAM_COLOR(s.team),16,1.8); addShake(3.5); beep(160,0.06,0.06);
+          if(s.team===TEAM.ENEMY && Player.upgrades.kcr>0) gainCredits(6*Player.upgrades.kcr);
+        }
+        ships.splice(i,1);
+      }
     }
   }
 
-  function drawShipBody(s){
-    const stroke=TEAM_COLOR(s.team), glow=TEAM_GLOW(s.team), accent=TYPE_ACCENT[s.type]||stroke;
-    if(Settings.bloom){ ctx.globalAlpha=0.25; ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(s.x,s.y,16,0,TAU); ctx.fill(); ctx.globalAlpha=1; }
-    ctx.lineWidth=2*DPR; ctx.strokeStyle=stroke; ctx.beginPath();
-    switch(s.type){
-      case 'Fighter':{
-        const up=(s.team===TEAM.PLAYER);
-        if(up){ ctx.moveTo(s.x, s.y-12); ctx.lineTo(s.x-9, s.y+10); ctx.lineTo(s.x+9, s.y+10); }
-        else   { ctx.moveTo(s.x, s.y+12); ctx.lineTo(s.x-9, s.y-10); ctx.lineTo(s.x+9, s.y-10); }
-        ctx.closePath(); ctx.stroke();
-        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR; ctx.beginPath(); ctx.moveTo(s.x, s.y+(up?6:-6)); ctx.lineTo(s.x, s.y+(up?-10:10)); ctx.stroke();
-        break;
-      }
-      case 'Interceptor':{
-        const up=(s.team===TEAM.PLAYER);
-        ctx.moveTo(s.x, s.y+(up?-12:12)); ctx.lineTo(s.x-12, s.y); ctx.lineTo(s.x, s.y+(up?12:-12)); ctx.lineTo(s.x+12, s.y); ctx.closePath(); ctx.stroke();
-        ctx.strokeStyle=accent; ctx.beginPath();
-        ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y+(up?6:-6));
-        ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y+(up?6:-6)); ctx.stroke();
-        break;
-      }
-      case 'Bomber':{
-        const up=(s.team===TEAM.PLAYER);
-        if(up){ ctx.moveTo(s.x-14, s.y+8); ctx.lineTo(s.x, s.y-12); ctx.lineTo(s.x+14, s.y+8); }
-        else  { ctx.moveTo(s.x-14, s.y-8); ctx.lineTo(s.x, s.y+12); ctx.lineTo(s.x+14, s.y-8); }
-        ctx.stroke();
-        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR; ctx.beginPath(); ctx.moveTo(s.x-10, s.y+(up?5:-5)); ctx.lineTo(s.x+10, s.y+(up?5:-5)); ctx.stroke();
-        break;
-      }
-      case 'Drone':{
-        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, TAU); ctx.stroke();
-        ctx.strokeStyle=accent; ctx.globalAlpha=0.8; ctx.beginPath(); ctx.ellipse(s.x, s.y, 13, 6, (now()*0.002)%Math.PI, 0, TAU); ctx.stroke(); ctx.globalAlpha=1;
-        break;
-      }
-      case 'Frigate':{
-        const r=12;
-        for(let i=0;i<6;i++){ const a=Math.PI/6 + i*TAU/6 + (s.team===TEAM.PLAYER?0:Math.PI); const px=s.x+Math.cos(a)*r, py=s.y+Math.sin(a)*r; if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
-        ctx.closePath(); ctx.stroke();
-        ctx.strokeStyle=accent; ctx.beginPath();
-        ctx.moveTo(s.x-8, s.y+(s.team===TEAM.PLAYER?10:-10)); ctx.lineTo(s.x-14, s.y+(s.team===TEAM.PLAYER?14:-14));
-        ctx.moveTo(s.x+8, s.y+(s.team===TEAM.PLAYER?10:-10)); ctx.lineTo(s.x+14, s.y+(s.team===TEAM.PLAYER?14:-14)); ctx.stroke();
-        break;
-      }
-    }
-    const w=24,h=4; ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(s.x-w/2, s.y-18, w, h);
-    ctx.fillStyle=stroke; ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
-  }
-  function shipDraw(){ for(const s of ships) drawShipBody(s); }
-
-  // Bullets
   function bulletsUpdate(dt){
     for(let i=bullets.length-1;i>=0;i--){
-      const b=bullets[i]; b.x+=b.vx*dt*60; b.y+=b.vy*dt*60; b.life-=dt;
+      const b=bullets[i];
+      b.x+=b.vx*dt*60; b.y+=b.vy*dt*60; b.life-=dt;
       if(b.life<=0){ bullets.splice(i,1); continue; }
-      let hit=false;
-      for(const s of ships){ if(s.team!==b.team && Math.hypot(s.x-b.x,s.y-b.y)<12){ s.hp-=b.dmg; hit=true; spawnSpark(b.x,b.y,TEAM_COLOR(b.team),8,1.3); break; } }
+
+      // hit ships
+      let hitIdx=-1;
+      for(let j=0;j<ships.length;j++){
+        const s=ships[j];
+        if(s.team!==b.team && Math.hypot(s.x-b.x, s.y-b.y)<12){
+          s.hp -= b.dmg * (1 + (Player.upgrades.prc?0.08:0));
+          // 5% pierce chance if upgraded
+          if(!(Player.upgrades.prc>0 && Math.random()<0.05)){ hitIdx=j; }
+          spawnSpark(b.x,b.y,TEAM_COLOR(b.team),8,1.3);
+          break;
+        }
+      }
+      if(hitIdx>=0){ bullets.splice(i,1); continue; }
+
+      // hit flagship
       const fs=b.team===TEAM.PLAYER?Flagship.e:Flagship.p; const rx=fs.x-fs.w*0.5, ry=fs.y-fs.h*0.5;
-      if(!hit && collideRectCircle(rx,ry,fs.w,fs.h,b.x,b.y,8)){ if(b.team===TEAM.PLAYER) Enemy.hp-=Math.floor(b.dmg*1.3); else Player.hp-=Math.floor(b.dmg*1.3); hit=true; addShake(5); spawnSpark(b.x,b.y,TEAM_COLOR(b.team),12,1.8); beep(220,0.06,0.07); }
-      if(hit){ bullets.splice(i,1); continue; }
-      if(b.x<-20||b.x>cv.width+20||b.y<-40||b.y>cv.height+40) bullets.splice(i,1);
+      if(collideRectCircle(rx,ry,fs.w,fs.h,b.x,b.y,8)){
+        if(b.team===TEAM.PLAYER){ Enemy.hp -= Math.floor(b.dmg*1.25); }
+        else { Player.hp -= Math.floor(b.dmg*1.25); }
+        spawnSpark(b.x,b.y,TEAM_COLOR(b.team),12,1.8); beep(220,0.06,0.07); addShake(5);
+        bullets.splice(i,1); continue;
+      }
+
+      if(b.x<-40||b.x>cv.width+40||b.y<-60||b.y>cv.height+60) bullets.splice(i,1);
     }
   }
-  function bulletsDraw(){
+
+  function drawShips(){ for(const s of ships) drawShipBody(s); }
+  function drawBullets(){
     ctx.globalCompositeOperation='lighter';
     for(const b of bullets){ const c=TEAM_COLOR(b.team); ctx.strokeStyle=c; ctx.lineWidth=2.4*DPR; ctx.beginPath(); ctx.moveTo(b.x-b.vx*0.9, b.y-b.vy*0.9); ctx.lineTo(b.x,b.y); ctx.stroke(); }
     ctx.globalCompositeOperation='source-over';
   }
 
-  // Flagships
-  function drawFlagship(fs, hpRatio, color){
-    const rx=fs.x-fs.w*0.5, ry=fs.y-fs.h*0.5;
-    if(Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle=color; ctx.fillRect(rx-8,ry-12,fs.w+16,fs.h+24); ctx.globalAlpha=1; }
-    ctx.strokeStyle=color; ctx.lineWidth=3*DPR; ctx.beginPath();
-    ctx.moveTo(rx, ry); ctx.lineTo(rx+fs.w*0.85, ry); ctx.lineTo(rx+fs.w, ry+fs.h*0.5);
-    ctx.lineTo(rx+fs.w*0.85, ry+fs.h); ctx.lineTo(rx, ry+fs.h); ctx.closePath(); ctx.stroke();
-    ctx.globalAlpha=0.4; ctx.fillStyle=color; ctx.beginPath(); ctx.ellipse(rx-10, ry+fs.h/2, 10, 24, 0, 0, TAU); ctx.fill(); ctx.globalAlpha=1;
-    ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(rx,ry-12,fs.w,6);
-    ctx.fillStyle=color; ctx.fillRect(rx,ry-12,fs.w*hpRatio,6);
+  /* =========================
+     Economy / Powers
+  ========================= */
+  function energyRegenFactor(){ let base=Player.energyRegen*(1+Player.upgrades.erg*0.15); if(Powers.over.active) base*=2.0; return base; }
+  function gainCredits(n){ Player.credits+=n; setMoneyHUD(); }
+
+  const Powers = {
+    over:{ cd:0, active:false, t:0, cost:6, dur:8, maxcd:20 },
+    shield:{ cd:0, cost:5, maxcd:18 },
+    rapid:{ cd:0, active:false, t:0, cost:4, dur:10, maxcd:18 },
+    focus:{ cd:0, active:false, t:0, cost:5, dur:10, maxcd:20 }
+  };
+
+  function tryPowerOver(){
+    if(Powers.over.cd>0||Player.energy<Powers.over.cost) return toast('Power unavailable');
+    Player.energy-=Powers.over.cost; Powers.over.active=true; Powers.over.t=Powers.over.dur; Powers.over.cd=Powers.over.maxcd;
+    toast('⚡ Overcharge on!'); beep(980,0.08,0.07);
+  }
+  function tryPowerShield(){
+    if(Powers.shield.cd>0||Player.energy<Powers.shield.cost) return toast('Power unavailable');
+    Player.energy-=Powers.shield.cost; Powers.shield.cd=Powers.shield.maxcd;
+    // heal allies near flagship
+    for(const s of ships){ if(s.team===TEAM.PLAYER && Math.abs(s.x-Flagship.p.x)<160 && Math.abs(s.y-Flagship.p.y)<Flagship.p.h*0.6){ s.hp=Math.min(s.hpMax, s.hp+20+(Player.upgrades.drn?10:0)); } }
+    toast('🛡 Shield pulse!'); spawnSpark(Flagship.p.x,Flagship.p.y,'#aef',24,2); beep(660,0.08,0.06);
+  }
+  function tryPowerRapid(){
+    if(Powers.rapid.cd>0||Player.energy<Powers.rapid.cost) return toast('Power unavailable');
+    Player.energy-=Powers.rapid.cost; Powers.rapid.active=true; Powers.rapid.t=Powers.rapid.dur; Powers.rapid.cd=Powers.rapid.maxcd;
+    toast('🚀 Rapid deploy!'); beep(840,0.08,0.06);
+  }
+  function tryPowerFocus(){
+    if(Powers.focus.cd>0||Player.energy<Powers.focus.cost) return toast('Power unavailable');
+    Player.energy-=Powers.focus.cost; Powers.focus.active=true; Powers.focus.t=Powers.focus.dur; Powers.focus.cd=Powers.focus.maxcd;
+    toast('🎯 Focus fire!'); beep(900,0.08,0.06);
+  }
+  function powersTick(dt){
+    for(const k of ['over','rapid','focus','shield']) if(Powers[k].cd>0) Powers[k].cd=Math.max(0,Powers[k].cd-dt);
+    if(Powers.over.active){ Powers.over.t-=dt; if(Powers.over.t<=0) Powers.over.active=false; }
+    if(Powers.rapid.active){ Powers.rapid.t-=dt; if(Powers.rapid.t<=0) Powers.rapid.active=false; }
+    if(Powers.focus.active){ Powers.focus.t-=dt; if(Powers.focus.t<=0) Powers.focus.active=false; }
   }
 
-  // Economy / Deploy
-  function energyRegenFactor(){ return Player.energyRegen*(1+Player.upgrades.erg*0.15); }
-  function gainCredits(n){ Player.credits+=n; setMoneyHUD(); }
-  function spendCredits(n){ if(Player.credits>=n){ Player.credits-=n; setMoneyHUD(); return true; } return false; }
-  function canAfford(type){ return Player.energy>=BASE_STATS[type].cost; }
-  function payEnergy(type){ Player.energy=Math.max(0, Player.energy-BASE_STATS[type].cost); }
-
-  // AI
+  /* =========================
+     AI (improved)
+  ========================= */
+  const AIState = { timer:1.0, waveBias:1, lastType:null, roundT:0 };
   function aiBestChoice(){
-    const options=ORDER.filter(t=> Enemy.energy>=BASE_STATS[t].cost*Enemy.difficultyBias);
-    if(options.length===0) return null; let best=null,bestScore=-1e9;
-    for(const t of options){
-      const st=BASE_STATS[t]; let score=(st.dmg*2 + st.hp*0.6 + st.spd*20) - st.cost*10;
-      const bombs=ships.filter(s=>s.team===TEAM.PLAYER && (s.type==='Bomber'||s.type==='Frigate')).length;
-      if(t==='Interceptor') score+=bombs*30;
-      if(t==='Fighter') score+=Math.max(0,bombs-1)*12;
-      if(t==='Drone') score+=(ships.filter(s=>s.team===TEAM.ENEMY).length>=3)?20:0;
-      if(t==='Bomber') score+=(Enemy.energy>6?15:0);
-      if(t==='Frigate') score+=8;
-      score+=st.dmg*(t==='Frigate'?3.5:2.0);
+    // Consider options affordable soon: sometimes wait to buy stronger units
+    const can = ORDER.filter(t=> Enemy.energy>=BASE_STATS[t].cost*Enemy.difficultyBias);
+    if(can.length===0) return null;
+
+    // Count composition
+    const me = ships.filter(s=>s.team===TEAM.ENEMY);
+    const you= ships.filter(s=>s.team===TEAM.PLAYER);
+    const count=(arr,type)=>arr.reduce((a,s)=>a+(s.type===type),0);
+    const mine={F:count(me,'Fighter'),I:count(me,'Interceptor'),B:count(me,'Bomber'),D:count(me,'Drone'),R:count(me,'Frigate')};
+    const your={F:count(you,'Fighter'),I:count(you,'Interceptor'),B:count(you,'Bomber'),D:count(you,'Drone'),R:count(you,'Frigate')};
+
+    let best=null,bestScore=-1e9;
+    for(const t of can){
+      const st=BASE_STATS[t];
+      let score = (st.dmg*2 + st.hp*0.6 + st.spd*22) - st.cost*9;
+
+      // counters & needs
+      score += your.B* (t==='Interceptor'? 40 : (t==='Fighter'? 12:0));
+      score += your.R* (t==='Interceptor'? 22 : 0);
+      score += your.F* (t==='Bomber' ? -20 : 6);
+      score += your.D* (t==='Bomber' ? 8 : 0);
+
+      // keep a mix
+      if(mine.D<Math.ceil((mine.F+mine.I+mine.B+mine.R)/4)) score += (t==='Drone'?20:0);
+      if(mine.B<2 && Round>=2) score += (t==='Bomber'?12:0);
+      if(mine.R<2 && Round>=3) score += (t==='Frigate'?12:0);
+
+      // prefer not to repeat same type constantly
+      if(AIState.lastType===t) score -= 6;
+
+      // low HP rush
+      if(Enemy.hp < Enemy.hpMax*0.5){ score += (t==='Fighter'||t==='Interceptor')?6:0; }
+      // winning -> greed for Bomber push
+      if(Player.hp < Player.hpMax*0.6){ score += (t==='Bomber'?10:0); }
+
+      // tiny lookahead: damage on flagship
+      score += st.dmg * (t==='Frigate'?3.5:2.0);
+
       if(score>bestScore){ bestScore=score; best=t; }
     }
     return best;
   }
-  const AIState={timer:1.0};
+
   function aiTick(dt){
-    Enemy.energy=Math.min(Enemy.energyMax, Enemy.energy+Enemy.energyRegen*dt);
-    AIState.timer-=dt;
+    Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + Enemy.energyRegen*dt);
+    AIState.timer -= dt;
+    AIState.roundT += dt;
+
+    // sometimes wait a bit to batch
+    const cadence = (Settings.difficulty===2? rand(0.6,1.0): rand(0.8,1.2)) * AIState.waveBias;
+
     if(AIState.timer<=0){
-      AIState.timer=rand(0.7,1.1)*(Settings.difficulty===2?0.9:1);
-      const choice=aiBestChoice();
-      if(choice){ Enemy.energy-=BASE_STATS[choice].cost*Enemy.difficultyBias; makeShip(choice,TEAM.ENEMY); }
+      const choice = aiBestChoice();
+      if(choice){
+        const cost = BASE_STATS[choice].cost*Enemy.difficultyBias;
+        if(Enemy.energy >= cost){
+          Enemy.energy -= cost;
+          makeShip(choice, TEAM.ENEMY);
+          AIState.lastType = choice;
+          AIState.timer = cadence;
+          // Occasionally deploy 2nd unit for a "wave"
+          if(Math.random()<0.25 && Enemy.energy>=cost){ Enemy.energy-=cost; makeShip(choice, TEAM.ENEMY); AIState.timer += 0.3; }
+        }else{
+          // wait for stronger unit
+          AIState.timer = 0.2;
+        }
+      }else{
+        AIState.timer = 0.3;
+      }
     }
+
+    // escalate slowly with time
+    if(AIState.roundT>30) AIState.waveBias = 0.9;
+    if(AIState.roundT>60) AIState.waveBias = 0.8;
   }
 
-  // Input / UI
-  const Keys={};
-  window.addEventListener('keydown', e=>{
-    Keys[e.code]=true;
-    if(e.code==='KeyP') togglePause();
-    if(e.code==='KeyH') openHelp();
-    if(e.code==='Space') tryDeploy();
+  /* =========================
+     UI Utilities
+  ========================= */
+  const $=id=>document.getElementById(id);
+  function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
+  function setEnergyHUD(){ const f=(Player.energy/Player.energyMax); $('energyFill').style.width=(f*100).toFixed(0)+'%'; $('energyNum').textContent=`${Math.floor(Player.energy)}/${Player.energyMax}`; }
+  function setHPHUD(){ const r=(Player.hp/Player.hpMax); $('hpFill').style.width=(r*100).toFixed(0)+'%'; $('hpNum').textContent=`${Math.max(0,Math.floor(r*100))}%`; const rr=(Enemy.hp/Enemy.hpMax); $('ehpFill').style.width=(rr*100).toFixed(0)+'%'; $('ehpNum').textContent=`${Math.max(0,Math.floor(rr*100))}%`; }
+  function setRoundHUD(){ $('roundVal').textContent=Round; }
+  function setMoneyHUD(){ $('moneyVal').textContent=Player.credits; $('shopCredits').textContent=Player.credits; }
+  function setTimeHUD(){ const t=Math.floor(roundTime); const m=(t/60|0).toString().padStart(2,'0'); const s=(t%60).toString().padStart(2,'0'); $('timeVal').textContent=`${m}:${s}`; }
+  function fitHUD(){ /* flex-wrap handles it; widths are responsive; no-op here */ }
+
+  /* =========================
+     Flow
+  ========================= */
+  function resetRound(){
+    ships.length=0; bullets.length=0; particles.length=0;
+    Player.energy=0; Enemy.energy=0;
+    Player.hp=Player.hpMax; Enemy.hp=Enemy.hpMax;
+    inBattle=true; gameOver=false; paused=false; roundTime=0;
+    AIState.timer=1.0; AIState.waveBias=1; AIState.lastType=null; AIState.roundT=0;
+    updateHUD();
+  }
+  function endBattle(victory){
+    inBattle=false; gameOver=true;
+    const dealt=Math.max(0,Enemy.hpMax-Enemy.hp), taken=Math.max(0,Player.hpMax-Player.hp);
+    const reward= victory ? (200 + Round*30) : (80 + Round*14);
+    gainCredits(reward);
+    $('resultText').textContent= victory? "Victory":"Defeat";
+    $('statsText').textContent=`Round ${Round} — Time: ${$('timeVal').textContent} — Damage Dealt: ${dealt} · Damage Taken: ${taken} · Reward: +${reward}c`;
+    showOverlay('gameover',true);
+    beep(victory?880:220,0.2,0.08); addShake(10);
+  }
+  function nextRound(){
+    Round++;
+    Enemy.energyRegen *= 1.06;
+    Enemy.hpMax = Math.floor(Enemy.hpMax*1.05); Enemy.hp=Enemy.hpMax;
+    Player.hp=Player.hpMax;
+    resetRound();
+    showOverlay('gameover',false);
+  }
+
+  function showOverlay(id,show=true){ $(id).classList.toggle('show',show); }
+  function updateHUD(){ setEnergyHUD(); setHPHUD(); setRoundHUD(); setMoneyHUD(); setTimeHUD(); updateDeployDockState(); }
+
+  /* =========================
+     Input & Buttons (bound once)
+  ========================= */
+  document.addEventListener('keydown', (e)=>{
+    if(e.code==='KeyP'){ if(!inBattle) return; paused=!paused; showOverlay('pause',paused); beep(400,0.05,0.05); }
+    if(e.code==='KeyH'){ showOverlay('help',true); }
+    if(e.code==='Space'){ tryDeploy(Selected); }
     if(e.code==='Digit1') selectType('Fighter');
     if(e.code==='Digit2') selectType('Interceptor');
     if(e.code==='Digit3') selectType('Bomber');
     if(e.code==='Digit4') selectType('Drone');
     if(e.code==='Digit5') selectType('Frigate');
   });
-  window.addEventListener('keyup', e=>{ Keys[e.code]=false; });
 
-  function selectType(t){ Selected.type=t; showToast(`Selected ${t}`); beep(900,0.03,0.04); }
-  function tryDeploy(){ if(!inBattle||paused) return; const t=Selected.type; if(canAfford(t)){ payEnergy(t); makeShip(t,TEAM.PLAYER); } else { showToast(`Need ${BASE_STATS[t].cost} energy`); beep(220,0.06,0.05); } }
+  // Speed buttons
+  document.querySelectorAll('[data-speed]').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      speedMult = parseFloat(b.dataset.speed)||1;
+      toast(`Speed ${speedMult}×`);
+    });
+  });
 
-  // Round / Flow
-  function resetRound(){
-    ships.length=0; bullets.length=0; particles.length=0;
-    Player.energy=0; Enemy.energy=0; Player.hp=Player.hpMax; Enemy.hp=Enemy.hpMax;
-    AIState.timer=1.0; inBattle=true; gameOver=false; paused=false; updateHUD();
-  }
-  function endBattle(victory){
-    inBattle=false; gameOver=true;
-    const dealt=Math.max(0,Enemy.hpMax-Enemy.hp), taken=Math.max(0,Player.hpMax-Player.hp);
-    const reward= victory ? (180+Round*30) : (60+Round*12);
-    gainCredits(reward);
-    $('resultText').textContent= victory? "Victory":"Defeat";
-    $('statsText').textContent=`Round ${Round} — Damage Dealt: ${dealt} · Damage Taken: ${taken} · Reward: +${reward}c`;
-    showOverlay('gameover',true); beep(victory?880:220,0.2,0.08); addShake(10);
-  }
-  function startFromTitle(){ $('title').classList.remove('show'); Round=1; resetRound(); }
-  function nextRound(){ Round++; Enemy.energyRegen*=1.06; Enemy.hpMax=Math.floor(Enemy.hpMax*1.05); Enemy.hp=Enemy.hpMax; Player.hp=Player.hpMax; resetRound(); showOverlay('gameover',false); }
+  // Dock deploy buttons
+  document.querySelectorAll('#deployDock .btn').forEach(b=>{
+    b.addEventListener('click', ()=>{ const t=b.dataset.type; if(t) { Selected=t; tryDeploy(t); } });
+  });
 
-  // DOM / HUD
-  const $=id=>document.getElementById(id);
-  function showOverlay(id,show=true){ $(id).classList.toggle('show',show); }
-  function togglePause(){ if(!inBattle) return; paused=!paused; showOverlay('pause',paused); beep(400,0.05,0.05); }
-  function openHelp(){ showOverlay('help',true); }
-  function closeHelp(){ showOverlay('help',false); }
+  // Powers buttons
+  $('powerOver').addEventListener('click', tryPowerOver);
+  $('powerShield').addEventListener('click', tryPowerShield);
+  $('powerRapid').addEventListener('click', tryPowerRapid);
+  $('powerFocus').addEventListener('click', tryPowerFocus);
 
-  function setEnergyHUD(){ const f=(Player.energy/Player.energyMax); $('energyFill').style.width=(f*100).toFixed(0)+'%'; $('energyNum').textContent=`${Math.floor(Player.energy)}/${Player.energyMax}`; }
-  function setHPHUD(){ const r=(Player.hp/Player.hpMax); $('hpFill').style.width=(r*100).toFixed(0)+'%'; $('hpNum').textContent=`${Math.max(0,Math.floor(r*100))}%`; const rr=(Enemy.hp/Enemy.hpMax); $('ehpFill').style.width=(rr*100).toFixed(0)+'%'; $('ehpNum').textContent=`${Math.max(0,Math.floor(rr*100))}%`; }
-  function setRoundHUD(){ $('roundVal').textContent=Round; }
-  function setMoneyHUD(){ $('moneyVal').textContent=Player.credits; $('shopCredits').textContent=Player.credits; }
-  function updateHUD(){ setEnergyHUD(); setHPHUD(); setRoundHUD(); setMoneyHUD(); }
-  function showToast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
-
-  // Buttons
-  $('playBtn').addEventListener('click', ()=>{ initAudio(); startFromTitle(); });
+  // Top menu buttons
+  $('playBtn').addEventListener('click', ()=>{ initAudio(); showOverlay('title',false); resetRound(); });
   $('howBtn').addEventListener('click', ()=> showOverlay('help',true));
-  $('closeHelp').addEventListener('click', closeHelp);
+  $('closeHelp').addEventListener('click', ()=> showOverlay('help',false));
   $('shopBtnFromTitle').addEventListener('click', ()=>{ showOverlay('title',false); showOverlay('shop',true); });
-  $('continueBtn').addEventListener('click', ()=>{ if(!inBattle && !gameOver) startFromTitle(); showOverlay('shop',false); });
+
+  $('continueBtn').addEventListener('click', ()=>{ if(!inBattle && !gameOver) resetRound(); showOverlay('shop',false); });
   $('backToTitleBtn').addEventListener('click', ()=>{ showOverlay('shop',false); showOverlay('title',true); });
 
-  $('resumeBtn').addEventListener('click', togglePause);
+  $('resumeBtn').addEventListener('click', ()=>{ paused=false; showOverlay('pause',false); });
   $('restartBtn').addEventListener('click', ()=>{ showOverlay('pause',false); paused=false; resetRound(); });
   $('toTitleBtn').addEventListener('click', ()=>{ paused=false; inBattle=false; ships.length=0; bullets.length=0; showOverlay('pause',false); showOverlay('title',true); });
 
   $('goShopBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); showOverlay('shop',true); });
-  $('playAgainBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); nextRound(); });
+  $('playAgainBtn').addEventListener('click', ()=> nextRound());
   $('quitBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); showOverlay('title',true); });
 
-  document.querySelectorAll('[data-diff]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      document.querySelectorAll('[data-diff]').forEach(b=>b.classList.remove('primary','danger'));
-      const v=Number(btn.dataset.diff); Settings.difficulty=v;
-      if(v===2) btn.classList.add('danger'); else btn.classList.add('primary');
-      applyDifficulty(); showToast(`Difficulty: ${['Easy','Normal','Hard'][v]}`);
-    });
-  });
-  $('optParticles').addEventListener('change', e=>Settings.particles=e.target.checked);
-  $('optBloom').addEventListener('change', e=>Settings.bloom=e.target.checked);
-  $('optShake').addEventListener('change', e=>Settings.shake=e.target.checked);
-  $('optSfx').addEventListener('change', e=>Settings.sfx=e.target.checked);
-  $('optVol').addEventListener('input', e=>{ masterVol=Number(e.target.value); });
-
-  // Shop
+  // Shop buys
   document.querySelectorAll('.buy').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      const type=btn.dataset.upg, prices={dmg:120,hp:120,erg:140,spd:100};
-      const name={dmg:'Damage Matrix',hp:'Shield Lattice',erg:'Reactor Overdrive',spd:'Thruster Suite'}[type];
+      const type=btn.dataset.upg, prices={dmg:120,hp:120,erg:140,spd:100,vel:90,prc:140,drn:120,kcr:100,tur:180};
+      const name={dmg:'Damage Matrix',hp:'Shield Lattice',erg:'Reactor Overdrive',spd:'Thruster Suite',vel:'Ballistics',prc:'Pierce Rounds',drn:'Drone Mesh++',kcr:'Kill Dividend',tur:'Flagship Turret'}[type];
       const cost=prices[type];
-      if(spendCredits(cost)){ Player.upgrades[type]=(Player.upgrades[type]||0)+1;
-        showToast(`Purchased ${name} (+${ type==='dmg'?'10% dmg': type==='hp'?'12% HP': type==='erg'?'15% regen':'10% speed'})`);
-        updateLoadoutText(); beep(1060,0.08,0.06);
-      }else{ showToast('Not enough credits'); beep(220,0.06,0.05); }
+      if(Player.credits>=cost){
+        Player.credits-=cost; Player.upgrades[type]=(Player.upgrades[type]||0)+1;
+        toast(`Purchased ${name}`); updateLoadoutText(); setMoneyHUD(); beep(1060,0.08,0.06);
+      }else{ toast('Not enough credits'); beep(220,0.06,0.05); }
     });
   });
+
   function updateLoadoutText(){
     const u=Player.upgrades;
-    const tags=[ u.dmg?`⚔ x${(1+u.dmg*0.10).toFixed(2)} dmg`:'' , u.hp?`🛡 x${(1+u.hp*0.12).toFixed(2)} HP`:'' , u.erg?`⚡ x${(1+u.erg*0.15).toFixed(2)} regen`:'' , u.spd?`🛞 x${(1+u.spd*0.10).toFixed(2)} speed`:'' ].filter(Boolean);
+    const tags=[
+      u.dmg?`⚔ x${(1+u.dmg*0.10).toFixed(2)} dmg`:'',
+      u.hp?`🛡 x${(1+u.hp*0.12).toFixed(2)} HP`:'',
+      u.erg?`⚡ x${(1+u.erg*0.15).toFixed(2)} regen`:'',
+      u.spd?`🛞 x${(1+u.spd*0.10).toFixed(2)} speed`:'',
+      u.vel?`🎯 x${(1+u.vel*0.15).toFixed(2)} shot spd`:'',
+      u.prc?`🧨 pierce +dmg`:'',
+      u.drn?`🛰 stronger drone`:'',
+      u.kcr?`💰 +kill credits`:'',
+      u.tur?`🔫 flagship turret`:''
+    ].filter(Boolean);
     $('loadoutText').textContent = tags.length? `Modifiers: ${tags.join(' · ')}` : 'Base modifiers: none.';
   }
   updateLoadoutText();
 
-  // Screenshot
-  $('btnScreenshot').addEventListener('click', ()=>{
-    try{ const a=document.createElement('a'); a.download=`void-clash-${Date.now()}.png`; a.href=cv.toDataURL('image/png'); a.click(); showToast('Screenshot saved'); }
-    catch(e){ showToast('Screenshot failed'); }
-  });
-  $('btnHelp').addEventListener('click', openHelp);
+  function selectType(t){ Selected=t; toast(`Selected ${t}`); beep(900,0.03,0.04); }
 
-  // Game Loop
+  function canAfford(type){ const base=BASE_STATS[type].cost; const disc = (Powers.rapid.active?1:0); return Player.energy >= (base - disc); }
+  function payEnergy(type){ const base=BASE_STATS[type].cost; const disc = (Powers.rapid.active?1:0); Player.energy = Math.max(0, Player.energy - (base - disc)); }
+
+  function tryDeploy(t){
+    if(!inBattle || paused) return;
+    if(canAfford(t)){ payEnergy(t); makeShip(t, TEAM.PLAYER); }
+    else { toast(`Need ${BASE_STATS[t].cost - (Powers.rapid.active?1:0)} energy`); beep(220,0.06,0.05); }
+  }
+
+  function updateDeployDockState(){
+    document.querySelectorAll('#deployDock .btn').forEach(b=>{
+      const t=b.dataset.type, can=canAfford(t);
+      b.disabled = !can;
+    });
+    // power cooldown badges (simple title update)
+    $('powerOver').disabled = Powers.over.cd>0 || Player.energy<Powers.over.cost;
+    $('powerShield').disabled = Powers.shield.cd>0 || Player.energy<Powers.shield.cost;
+    $('powerRapid').disabled = Powers.rapid.cd>0 || Player.energy<Powers.rapid.cost;
+    $('powerFocus').disabled = Powers.focus.cd>0 || Player.energy<Powers.focus.cost;
+  }
+
+  /* =========================
+     Flagship Turret (upgrade)
+  ========================= */
+  let turretCD=0;
+  function turretTick(dt){
+    if(Player.upgrades.tur<=0 || !inBattle || paused) return;
+    turretCD -= dt;
+    if(turretCD<=0){
+      turretCD = Math.max(1.6, 3.0 - Player.upgrades.tur*0.4);
+      // fire at nearest enemy
+      let tg=null,best=Infinity;
+      for(const o of ships){ if(o.team===TEAM.ENEMY){ const d=(o.x-Flagship.p.x)**2 + (o.y-Flagship.p.y)**2; if(d<best){best=d; tg=o;} } }
+      if(tg){ fireBullet({x:Flagship.p.x+18,y:Flagship.p.y,team:TEAM.PLAYER,dmg:10}, tg.x, tg.y, 6.6, 12+Player.upgrades.tur*3); }
+    }
+  }
+
+  /* =========================
+     Frame Loop
+  ========================= */
   let last=now();
   function frame(){
-    const t=now(); let dt=(t-last)/1000; if(dt>0.1) dt=0.1; last=t;
+    const t=now();
+    let dt=(t-last)/1000; if(dt>0.1) dt=0.1; last=t;
+    const sim = dt*speedMult;
+
+    // world
     ctx.clearRect(0,0,cv.width,cv.height);
-    drawBackground(dt); applyCamera();
+    drawBackground(sim);
+    applyCamera();
 
     if(inBattle && !paused){
-      Player.energy=Math.min(Player.energyMax, Player.energy+energyRegenFactor()*dt); setEnergyHUD();
-      aiTick(dt); shipUpdate(dt); bulletsUpdate(dt); particleUpdate(dt);
+      roundTime += sim; setTimeHUD();
+
+      // regen energy
+      Player.energy = Math.min(Player.energyMax, Player.energy + energyRegenFactor()*sim);
+      Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + 0); // handled in aiTick
+      setEnergyHUD();
+
+      aiTick(sim);
+      powersTick(sim);
+      shipUpdate(sim);
+      bulletsUpdate(sim);
+      particleUpdate(sim);
+      turretTick(sim);
+
       if(Enemy.hp<=0) endBattle(true);
       if(Player.hp<=0) endBattle(false);
-    }else{ particleUpdate(dt); }
+    }else{
+      particleUpdate(sim);
+    }
 
-    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.moveTo(0, cv.height/2); ctx.lineTo(cv.width, cv.height/2); ctx.stroke();
+    // center vertical guide
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.stroke();
 
     drawFlagship(Flagship.p, Player.hp/Player.hpMax, "#00faff");
     drawFlagship(Flagship.e, Enemy.hp/Enemy.hpMax, "#ff4d7a");
-    shipDraw(); bulletsDraw(); particleDraw();
+    drawShips(); drawBullets(); particleDraw();
 
-    resetCamera(); requestAnimationFrame(frame);
+    setHPHUD();
+    updateDeployDockState();
+
+    resetCamera();
+    requestAnimationFrame(frame);
   }
   frame();
 
-  setInterval(()=>{ setHPHUD(); },150);
-  window.addEventListener('resize', updateHUD);
-
-  // Initial
-  showOverlay('title',true); updateHUD();
-
-
+  setInterval(()=>{ setHPHUD(); }, 200);
 
   /* =========================
-   HORIZONTAL LANE PATCH
-   ========================= */
-(function(){
-  // 1) Move flagships to left/right & make them vertical hulls
-  Flagship.p.x = 110;                 Flagship.e.x = cv.width - 110;
-  Flagship.p.y = cv.height * 0.5;     Flagship.e.y = cv.height * 0.5;
-  Flagship.p.w = 28;  Flagship.p.h = 200;
-  Flagship.e.w = 28;  Flagship.e.h = 200;
+     Init
+  ========================= */
+  function start(){ showOverlay('title',true); updateHUD(); fitHUD(); }
+  start();
 
-  window.addEventListener('resize', ()=>{
-    Flagship.p.x = 110;                 Flagship.e.x = cv.width - 110;
-    Flagship.p.y = cv.height * 0.5;     Flagship.e.y = cv.height * 0.5;
-    Flagship.p.w = 28;  Flagship.p.h = 200;
-    Flagship.e.w = 28;  Flagship.e.h = 200;
-  });
-
-  // 2) Horizontal flagship drawer
-  function drawFlagshipH(fs, hpRatio, color){
-    const rx = fs.x - fs.w*0.5, ry = fs.y - fs.h*0.5;
-    if (Settings.bloom){
-      ctx.globalAlpha = .25; ctx.fillStyle = color;
-      ctx.fillRect(rx-12, ry-8, fs.w+24, fs.h+16);
-      ctx.globalAlpha = 1;
-    }
-    const pointRight = (fs === Flagship.p);
-    ctx.strokeStyle=color; ctx.lineWidth=3*DPR;
-    ctx.beginPath();
-    if(pointRight){
-      ctx.moveTo(rx,           ry);
-      ctx.lineTo(rx+fs.w,      ry+fs.h*0.15);
-      ctx.lineTo(rx+fs.w,      ry+fs.h*0.85);
-      ctx.lineTo(rx,           ry+fs.h);
-    }else{
-      ctx.moveTo(rx+fs.w,      ry);
-      ctx.lineTo(rx,           ry+fs.h*0.15);
-      ctx.lineTo(rx,           ry+fs.h*0.85);
-      ctx.lineTo(rx+fs.w,      ry+fs.h);
-    }
-    ctx.closePath(); ctx.stroke();
-
-    // side engine glow
-    ctx.globalAlpha=0.4; ctx.fillStyle=color;
-    if(pointRight) { ctx.fillRect(rx-12, ry+fs.h*0.25, 10, fs.h*0.5); }
-    else           { ctx.fillRect(rx+fs.w+2, ry+fs.h*0.25, 10, fs.h*0.5); }
-    ctx.globalAlpha=1;
-
-    // vertical HP bar
-    const hpH = fs.h * clamp(hpRatio,0,1);
-    ctx.fillStyle="rgba(255,255,255,.06)";
-    if(pointRight){
-      ctx.fillRect(rx-8, ry, 6, fs.h);
-      ctx.fillStyle=color; ctx.fillRect(rx-8, ry+(fs.h-hpH), 6, hpH);
-    }else{
-      ctx.fillRect(rx+fs.w+2, ry, 6, fs.h);
-      ctx.fillStyle=color; ctx.fillRect(rx+fs.w+2, ry+(fs.h-hpH), 6, hpH);
-    }
-  }
-  // Replace drawer
-  drawFlagship = drawFlagshipH;
-
-  // 3) Horizontal spawns/movement
-  makeShip = function(type, team){
-    const b = BASE_STATS[type];
-    const hpUp  = 1 + Player.upgrades.hp*0.12;
-    const dmgUp = 1 + Player.upgrades.dmg*0.10;
-    const spdUp = 1 + Player.upgrades.spd*0.10;
-
-    const s = {
-      type, team,
-      x: team===TEAM.PLAYER ? (Flagship.p.x + 46) : (Flagship.e.x - 46),
-      y: team===TEAM.PLAYER ? (Flagship.p.y + rand(-60,60)) : (Flagship.e.y + rand(-60,60)),
-      vx: (b.spd * (team===TEAM.PLAYER? +1 : -1) * spdUp) * 60,
-      vy: 0,
-      hp: Math.floor(b.hp*hpUp), hpMax: Math.floor(b.hp*hpUp),
-      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range
-    };
-    ships.push(s);
-    spawnSpark(s.x,s.y, (team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 10, 1.3);
-    beep(team===TEAM.PLAYER?540:500,0.05,0.05);
-    return s;
-  };
-
-  // 4) Horizontal ship logic + contact
-  function _shipUpdateHorizontal(dt){
-    for (let i=ships.length-1;i>=0;i--){
-      const s = ships[i];
-      s.x += s.vx * dt;
-
-      // Thrusters (backwards along X)
-      const back = (s.team===TEAM.PLAYER? -1 : +1);
-      thruster(s.x + back*10, s.y, back*0.8, 0, (s.team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 1);
-
-      // Targeting
-      s.cd -= dt;
-      let tg=null, best=Infinity;
-      for (const o of ships){
-        if(o.team!==s.team){
-          const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy;
-          if(d<best){ best=d; tg=o; }
-        }
-      }
-      const fs = (s.team===TEAM.PLAYER? Flagship.e : Flagship.p);
-      const tx = tg? tg.x : fs.x;
-      const ty = tg? tg.y : fs.y;
-
-      if (s.type!=='Drone'){
-        const dx = Math.abs(tx - s.x);
-        if (dx < s.range && s.cd<=0){
-          s.cd = s.rof;
-          const spd = (s.type==='Frigate'? 5.6 : (s.type==='Bomber'?3.9:5.2));
-          fireBullet(s, tx, ty, spd);
-        }
-      }
-
-      if (s.hp<=0 || s.x<-60 || s.x>cv.width+60){
-        if(s.hp<=0){ spawnSpark(s.x,s.y, (s.team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 16, 1.8); addShake(3.5); beep(160,0.06,0.06); }
-        ships.splice(i,1);
-      }
-    }
-  }
-
-  function contactResolveH(dt){
-    if(ships.length<2) return;
-    const buckets = new Map(), bucketSize = 36;
-    for(const s of ships){
-      const k = (s.x/bucketSize|0);
-      if(!buckets.has(k)) buckets.set(k,[]);
-      buckets.get(k).push(s);
-    }
-    for(const [k,list] of buckets){
-      const neigh = [...list, ...(buckets.get(k-1)||[]), ...(buckets.get(k+1)||[])];
-      for(let i=0;i<list.length;i++){
-        const a = list[i];
-        for(let j=0;j<neigh.length;j++){
-          const b = neigh[j];
-          if(a===b || a.team===b.team) continue;
-          if(Math.abs(a.x-b.x) < 18 && Math.abs(a.y-b.y) < 28){
-            const dpsA = Math.max(6, (a.dmg/Math.max(0.4,a.rof))*0.55);
-            const dpsB = Math.max(6, (b.dmg/Math.max(0.4,b.rof))*0.55);
-            a.hp -= dpsB * dt; b.hp -= dpsA * dt;
-
-            // slow & separate horizontally
-            a.vx *= 0.65; b.vx *= 0.65;
-            const push = 14 * (a.x<b.x? -1: +1) * dt;
-            a.x += push; b.x -= push;
-
-            if(Math.random()<0.05){ sfxHit(); spawnSpark((a.x+b.x)*0.5,(a.y+b.y)*0.5, '#cfe', 6, 1.2); }
-          }
-        }
-      }
-    }
-  }
-
-  const usingSpeed = (typeof Speed==='object' && typeof Speed.mult==='number');
-  const hasCD = (typeof cooldownTick==='function');
-  shipUpdate = (dt)=>{
-    const mult = usingSpeed ? Speed.mult : 1;
-    const step = dt * mult;
-    if(hasCD) cooldownTick(step);
-    _shipUpdateHorizontal(step);
-    contactResolveH(step);
-  };
-
-  // 5) Add a vertical center guide each draw via flagship drawer
-  const __drawFlagship = drawFlagship;
-  drawFlagship = function(fs, hp, color){
-    ctx.strokeStyle='rgba(255,255,255,.06)';
-    ctx.beginPath(); ctx.moveTo(cv.width/2, 0); ctx.lineTo(cv.width/2, cv.height); ctx.stroke();
-    drawFlagshipH(fs, hp, color);
-  };
-
-})(); // end Horizontal Patch
-
-
-
-/* =========================
-   FACE-EACH-OTHER PATCH
-   ========================= */
-(function(){
-  const _oldDraw = (typeof drawShipBody==='function') ? drawShipBody : null;
-
-  function drawShipBodyH(s){
-    const stroke = TEAM_COLOR(s.team);
-    const glow   = TEAM_GLOW(s.team);
-    const accent = TYPE_ACCENT[s.type] || stroke;
-    const faceRight = (s.team === TEAM.PLAYER);
-
-    if (Settings.bloom){
-      ctx.globalAlpha = 0.25; ctx.fillStyle = glow;
-      ctx.beginPath(); ctx.arc(s.x, s.y, 16, 0, TAU); ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.lineWidth = 2*DPR; ctx.strokeStyle = stroke;
-
-    const tri = (len=18, halfW=10)=>{
-      ctx.beginPath();
-      if (faceRight){
-        ctx.moveTo(s.x+len, s.y);
-        ctx.lineTo(s.x-len*0.6, s.y-halfW);
-        ctx.lineTo(s.x-len*0.6, s.y+halfW);
-      } else {
-        ctx.moveTo(s.x-len, s.y);
-        ctx.lineTo(s.x+len*0.6, s.y-halfW);
-        ctx.lineTo(s.x+len*0.6, s.y+halfW);
-      }
-      ctx.closePath(); ctx.stroke();
-    };
-
-    switch(s.type){
-      case 'Fighter': {
-        tri(18, 9);
-        ctx.strokeStyle = accent; ctx.lineWidth = 1.5*DPR;
-        ctx.beginPath();
-        if (faceRight){ ctx.moveTo(s.x-8, s.y); ctx.lineTo(s.x+12, s.y); }
-        else          { ctx.moveTo(s.x+8, s.y);  ctx.lineTo(s.x-12, s.y); }
-        ctx.stroke();
-        break;
-      }
-      case 'Interceptor': {
-        const a = 12;
-        ctx.beginPath();
-        if (faceRight){
-          ctx.moveTo(s.x+a, s.y);
-          ctx.lineTo(s.x, s.y-a);
-          ctx.lineTo(s.x-a, s.y);
-          ctx.lineTo(s.x, s.y+a);
-        } else {
-          ctx.moveTo(s.x-a, s.y);
-          ctx.lineTo(s.x, s.y-a);
-          ctx.lineTo(s.x+a, s.y);
-          ctx.lineTo(s.x, s.y+a);
-        }
-        ctx.closePath(); ctx.stroke();
-        ctx.strokeStyle = accent;
-        ctx.beginPath();
-        if (faceRight){
-          ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y-6);
-          ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y+6);
-        } else {
-          ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y-6);
-          ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y+6);
-        }
-        ctx.stroke();
-        break;
-      }
-      case 'Bomber': {
-        ctx.beginPath();
-        if (faceRight){
-          ctx.moveTo(s.x-14, s.y-8); ctx.lineTo(s.x+14, s.y); ctx.lineTo(s.x-14, s.y+8);
-        } else {
-          ctx.moveTo(s.x+14, s.y-8); ctx.lineTo(s.x-14, s.y); ctx.lineTo(s.x+14, s.y+8);
-        }
-        ctx.stroke();
-        ctx.strokeStyle = accent; ctx.lineWidth = 1.5*DPR;
-        ctx.beginPath();
-        if (faceRight){ ctx.moveTo(s.x-6, s.y-6); ctx.lineTo(s.x-6, s.y+6); }
-        else          { ctx.moveTo(s.x+6, s.y-6); ctx.lineTo(s.x+6, s.y+6); }
-        ctx.stroke();
-        break;
-      }
-      case 'Drone': {
-        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, TAU); ctx.stroke();
-        ctx.strokeStyle = accent; ctx.globalAlpha = 0.8;
-        ctx.beginPath(); ctx.ellipse(s.x, s.y, 13, 6, 0, 0, TAU); ctx.stroke();
-        ctx.globalAlpha = 1;
-        break;
-      }
-      case 'Frigate': {
-        const r = 12, rot = faceRight ? 0 : Math.PI;
-        ctx.beginPath();
-        for (let i=0;i<6;i++){
-          const ang = rot + Math.PI/6 + i*(Math.PI*2)/6;
-          const px = s.x + Math.cos(ang)*r, py = s.y + Math.sin(ang)*r;
-          if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-        }
-        ctx.closePath(); ctx.stroke();
-        ctx.strokeStyle = accent;
-        ctx.beginPath();
-        if (faceRight){
-          ctx.moveTo(s.x+10, s.y-6); ctx.lineTo(s.x+16, s.y-10);
-          ctx.moveTo(s.x+10, s.y+6); ctx.lineTo(s.x+16, s.y+10);
-        } else {
-          ctx.moveTo(s.x-10, s.y-6); ctx.lineTo(s.x-16, s.y-10);
-          ctx.moveTo(s.x-10, s.y+6); ctx.lineTo(s.x-16, s.y+10);
-        }
-        ctx.stroke();
-        break;
-      }
-    }
-
-    const w=24,h=4;
-    ctx.fillStyle='rgba(255,255,255,.08)';
-    ctx.fillRect(s.x-w/2, s.y-18, w, h);
-    ctx.fillStyle=stroke;
-    ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
-  }
-
-  if (_oldDraw) drawShipBody = drawShipBodyH;
 })();
-
-
-})(); // IIFE end
 </script>
 </body>
 </html>
- 
