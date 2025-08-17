@@ -215,9 +215,6 @@
         <div class="opt">
           <strong>Synergies</strong>
           <div class="small">Fighter > Bomber; Interceptor > Bomber/Frigate; Drones heal; escort Bombers.</div>
-          <div style="height:8px"></div>
-          <strong>Upgrades</strong>
-          <div class="small">Spend Credits between rounds on damage, HP, energy regen, or speed.</div>
         </div>
       </div>
     </div>
@@ -337,6 +334,8 @@
     o.type='square'; o.frequency.value=freq; g.gain.value=gain*masterVol; o.connect(g).connect(audioCtx.destination);
     o.start(t); o.stop(t+dur);
   }
+  // small helper for contact SFX
+  function sfxHit(){ beep(280,0.04,0.05); }
 
   // Settings / State
   const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
@@ -703,6 +702,311 @@
 
   // Initial
   showOverlay('title',true); updateHUD();
+
+
+
+  /* =========================
+   HORIZONTAL LANE PATCH
+   ========================= */
+(function(){
+  // 1) Move flagships to left/right & make them vertical hulls
+  Flagship.p.x = 110;                 Flagship.e.x = cv.width - 110;
+  Flagship.p.y = cv.height * 0.5;     Flagship.e.y = cv.height * 0.5;
+  Flagship.p.w = 28;  Flagship.p.h = 200;
+  Flagship.e.w = 28;  Flagship.e.h = 200;
+
+  window.addEventListener('resize', ()=>{
+    Flagship.p.x = 110;                 Flagship.e.x = cv.width - 110;
+    Flagship.p.y = cv.height * 0.5;     Flagship.e.y = cv.height * 0.5;
+    Flagship.p.w = 28;  Flagship.p.h = 200;
+    Flagship.e.w = 28;  Flagship.e.h = 200;
+  });
+
+  // 2) Horizontal flagship drawer
+  function drawFlagshipH(fs, hpRatio, color){
+    const rx = fs.x - fs.w*0.5, ry = fs.y - fs.h*0.5;
+    if (Settings.bloom){
+      ctx.globalAlpha = .25; ctx.fillStyle = color;
+      ctx.fillRect(rx-12, ry-8, fs.w+24, fs.h+16);
+      ctx.globalAlpha = 1;
+    }
+    const pointRight = (fs === Flagship.p);
+    ctx.strokeStyle=color; ctx.lineWidth=3*DPR;
+    ctx.beginPath();
+    if(pointRight){
+      ctx.moveTo(rx,           ry);
+      ctx.lineTo(rx+fs.w,      ry+fs.h*0.15);
+      ctx.lineTo(rx+fs.w,      ry+fs.h*0.85);
+      ctx.lineTo(rx,           ry+fs.h);
+    }else{
+      ctx.moveTo(rx+fs.w,      ry);
+      ctx.lineTo(rx,           ry+fs.h*0.15);
+      ctx.lineTo(rx,           ry+fs.h*0.85);
+      ctx.lineTo(rx+fs.w,      ry+fs.h);
+    }
+    ctx.closePath(); ctx.stroke();
+
+    // side engine glow
+    ctx.globalAlpha=0.4; ctx.fillStyle=color;
+    if(pointRight) { ctx.fillRect(rx-12, ry+fs.h*0.25, 10, fs.h*0.5); }
+    else           { ctx.fillRect(rx+fs.w+2, ry+fs.h*0.25, 10, fs.h*0.5); }
+    ctx.globalAlpha=1;
+
+    // vertical HP bar
+    const hpH = fs.h * clamp(hpRatio,0,1);
+    ctx.fillStyle="rgba(255,255,255,.06)";
+    if(pointRight){
+      ctx.fillRect(rx-8, ry, 6, fs.h);
+      ctx.fillStyle=color; ctx.fillRect(rx-8, ry+(fs.h-hpH), 6, hpH);
+    }else{
+      ctx.fillRect(rx+fs.w+2, ry, 6, fs.h);
+      ctx.fillStyle=color; ctx.fillRect(rx+fs.w+2, ry+(fs.h-hpH), 6, hpH);
+    }
+  }
+  // Replace drawer
+  drawFlagship = drawFlagshipH;
+
+  // 3) Horizontal spawns/movement
+  makeShip = function(type, team){
+    const b = BASE_STATS[type];
+    const hpUp  = 1 + Player.upgrades.hp*0.12;
+    const dmgUp = 1 + Player.upgrades.dmg*0.10;
+    const spdUp = 1 + Player.upgrades.spd*0.10;
+
+    const s = {
+      type, team,
+      x: team===TEAM.PLAYER ? (Flagship.p.x + 46) : (Flagship.e.x - 46),
+      y: team===TEAM.PLAYER ? (Flagship.p.y + rand(-60,60)) : (Flagship.e.y + rand(-60,60)),
+      vx: (b.spd * (team===TEAM.PLAYER? +1 : -1) * spdUp) * 60,
+      vy: 0,
+      hp: Math.floor(b.hp*hpUp), hpMax: Math.floor(b.hp*hpUp),
+      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range
+    };
+    ships.push(s);
+    spawnSpark(s.x,s.y, (team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 10, 1.3);
+    beep(team===TEAM.PLAYER?540:500,0.05,0.05);
+    return s;
+  };
+
+  // 4) Horizontal ship logic + contact
+  function _shipUpdateHorizontal(dt){
+    for (let i=ships.length-1;i>=0;i--){
+      const s = ships[i];
+      s.x += s.vx * dt;
+
+      // Thrusters (backwards along X)
+      const back = (s.team===TEAM.PLAYER? -1 : +1);
+      thruster(s.x + back*10, s.y, back*0.8, 0, (s.team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 1);
+
+      // Targeting
+      s.cd -= dt;
+      let tg=null, best=Infinity;
+      for (const o of ships){
+        if(o.team!==s.team){
+          const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy;
+          if(d<best){ best=d; tg=o; }
+        }
+      }
+      const fs = (s.team===TEAM.PLAYER? Flagship.e : Flagship.p);
+      const tx = tg? tg.x : fs.x;
+      const ty = tg? tg.y : fs.y;
+
+      if (s.type!=='Drone'){
+        const dx = Math.abs(tx - s.x);
+        if (dx < s.range && s.cd<=0){
+          s.cd = s.rof;
+          const spd = (s.type==='Frigate'? 5.6 : (s.type==='Bomber'?3.9:5.2));
+          fireBullet(s, tx, ty, spd);
+        }
+      }
+
+      if (s.hp<=0 || s.x<-60 || s.x>cv.width+60){
+        if(s.hp<=0){ spawnSpark(s.x,s.y, (s.team===TEAM.PLAYER? '#51d9ff':'#ff4d7a'), 16, 1.8); addShake(3.5); beep(160,0.06,0.06); }
+        ships.splice(i,1);
+      }
+    }
+  }
+
+  function contactResolveH(dt){
+    if(ships.length<2) return;
+    const buckets = new Map(), bucketSize = 36;
+    for(const s of ships){
+      const k = (s.x/bucketSize|0);
+      if(!buckets.has(k)) buckets.set(k,[]);
+      buckets.get(k).push(s);
+    }
+    for(const [k,list] of buckets){
+      const neigh = [...list, ...(buckets.get(k-1)||[]), ...(buckets.get(k+1)||[])];
+      for(let i=0;i<list.length;i++){
+        const a = list[i];
+        for(let j=0;j<neigh.length;j++){
+          const b = neigh[j];
+          if(a===b || a.team===b.team) continue;
+          if(Math.abs(a.x-b.x) < 18 && Math.abs(a.y-b.y) < 28){
+            const dpsA = Math.max(6, (a.dmg/Math.max(0.4,a.rof))*0.55);
+            const dpsB = Math.max(6, (b.dmg/Math.max(0.4,b.rof))*0.55);
+            a.hp -= dpsB * dt; b.hp -= dpsA * dt;
+
+            // slow & separate horizontally
+            a.vx *= 0.65; b.vx *= 0.65;
+            const push = 14 * (a.x<b.x? -1: +1) * dt;
+            a.x += push; b.x -= push;
+
+            if(Math.random()<0.05){ sfxHit(); spawnSpark((a.x+b.x)*0.5,(a.y+b.y)*0.5, '#cfe', 6, 1.2); }
+          }
+        }
+      }
+    }
+  }
+
+  const usingSpeed = (typeof Speed==='object' && typeof Speed.mult==='number');
+  const hasCD = (typeof cooldownTick==='function');
+  shipUpdate = (dt)=>{
+    const mult = usingSpeed ? Speed.mult : 1;
+    const step = dt * mult;
+    if(hasCD) cooldownTick(step);
+    _shipUpdateHorizontal(step);
+    contactResolveH(step);
+  };
+
+  // 5) Add a vertical center guide each draw via flagship drawer
+  const __drawFlagship = drawFlagship;
+  drawFlagship = function(fs, hp, color){
+    ctx.strokeStyle='rgba(255,255,255,.06)';
+    ctx.beginPath(); ctx.moveTo(cv.width/2, 0); ctx.lineTo(cv.width/2, cv.height); ctx.stroke();
+    drawFlagshipH(fs, hp, color);
+  };
+
+})(); // end Horizontal Patch
+
+
+
+/* =========================
+   FACE-EACH-OTHER PATCH
+   ========================= */
+(function(){
+  const _oldDraw = (typeof drawShipBody==='function') ? drawShipBody : null;
+
+  function drawShipBodyH(s){
+    const stroke = TEAM_COLOR(s.team);
+    const glow   = TEAM_GLOW(s.team);
+    const accent = TYPE_ACCENT[s.type] || stroke;
+    const faceRight = (s.team === TEAM.PLAYER);
+
+    if (Settings.bloom){
+      ctx.globalAlpha = 0.25; ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 16, 0, TAU); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.lineWidth = 2*DPR; ctx.strokeStyle = stroke;
+
+    const tri = (len=18, halfW=10)=>{
+      ctx.beginPath();
+      if (faceRight){
+        ctx.moveTo(s.x+len, s.y);
+        ctx.lineTo(s.x-len*0.6, s.y-halfW);
+        ctx.lineTo(s.x-len*0.6, s.y+halfW);
+      } else {
+        ctx.moveTo(s.x-len, s.y);
+        ctx.lineTo(s.x+len*0.6, s.y-halfW);
+        ctx.lineTo(s.x+len*0.6, s.y+halfW);
+      }
+      ctx.closePath(); ctx.stroke();
+    };
+
+    switch(s.type){
+      case 'Fighter': {
+        tri(18, 9);
+        ctx.strokeStyle = accent; ctx.lineWidth = 1.5*DPR;
+        ctx.beginPath();
+        if (faceRight){ ctx.moveTo(s.x-8, s.y); ctx.lineTo(s.x+12, s.y); }
+        else          { ctx.moveTo(s.x+8, s.y);  ctx.lineTo(s.x-12, s.y); }
+        ctx.stroke();
+        break;
+      }
+      case 'Interceptor': {
+        const a = 12;
+        ctx.beginPath();
+        if (faceRight){
+          ctx.moveTo(s.x+a, s.y);
+          ctx.lineTo(s.x, s.y-a);
+          ctx.lineTo(s.x-a, s.y);
+          ctx.lineTo(s.x, s.y+a);
+        } else {
+          ctx.moveTo(s.x-a, s.y);
+          ctx.lineTo(s.x, s.y-a);
+          ctx.lineTo(s.x+a, s.y);
+          ctx.lineTo(s.x, s.y+a);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle = accent;
+        ctx.beginPath();
+        if (faceRight){
+          ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y-6);
+          ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y+6);
+        } else {
+          ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y-6);
+          ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y+6);
+        }
+        ctx.stroke();
+        break;
+      }
+      case 'Bomber': {
+        ctx.beginPath();
+        if (faceRight){
+          ctx.moveTo(s.x-14, s.y-8); ctx.lineTo(s.x+14, s.y); ctx.lineTo(s.x-14, s.y+8);
+        } else {
+          ctx.moveTo(s.x+14, s.y-8); ctx.lineTo(s.x-14, s.y); ctx.lineTo(s.x+14, s.y+8);
+        }
+        ctx.stroke();
+        ctx.strokeStyle = accent; ctx.lineWidth = 1.5*DPR;
+        ctx.beginPath();
+        if (faceRight){ ctx.moveTo(s.x-6, s.y-6); ctx.lineTo(s.x-6, s.y+6); }
+        else          { ctx.moveTo(s.x+6, s.y-6); ctx.lineTo(s.x+6, s.y+6); }
+        ctx.stroke();
+        break;
+      }
+      case 'Drone': {
+        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = accent; ctx.globalAlpha = 0.8;
+        ctx.beginPath(); ctx.ellipse(s.x, s.y, 13, 6, 0, 0, TAU); ctx.stroke();
+        ctx.globalAlpha = 1;
+        break;
+      }
+      case 'Frigate': {
+        const r = 12, rot = faceRight ? 0 : Math.PI;
+        ctx.beginPath();
+        for (let i=0;i<6;i++){
+          const ang = rot + Math.PI/6 + i*(Math.PI*2)/6;
+          const px = s.x + Math.cos(ang)*r, py = s.y + Math.sin(ang)*r;
+          if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+        }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle = accent;
+        ctx.beginPath();
+        if (faceRight){
+          ctx.moveTo(s.x+10, s.y-6); ctx.lineTo(s.x+16, s.y-10);
+          ctx.moveTo(s.x+10, s.y+6); ctx.lineTo(s.x+16, s.y+10);
+        } else {
+          ctx.moveTo(s.x-10, s.y-6); ctx.lineTo(s.x-16, s.y-10);
+          ctx.moveTo(s.x-10, s.y+6); ctx.lineTo(s.x-16, s.y+10);
+        }
+        ctx.stroke();
+        break;
+      }
+    }
+
+    const w=24,h=4;
+    ctx.fillStyle='rgba(255,255,255,.08)';
+    ctx.fillRect(s.x-w/2, s.y-18, w, h);
+    ctx.fillStyle=stroke;
+    ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
+  }
+
+  if (_oldDraw) drawShipBody = drawShipBodyH;
+})();
+
 
 })(); // IIFE end
 </script>
