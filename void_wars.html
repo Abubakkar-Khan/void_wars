@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Void Clash: Duel of Flagships</title>
+<title>Void Clash: Duel of Flagships — Visual Upgrade</title>
 <style>
   :root{
     --fg:#eaffff;
     --accent:#00faff;
     --accent2:#9a5cff;
-    --danger:#ff3b6a;
+    --danger:#ff4d7a;
     --good:#50ffa8;
     --bg:#04050a;
     --panel:rgba(10,12,20,.72);
@@ -24,10 +24,7 @@
 
   /* UI LAYER */
   .overlay{position:fixed;inset:0;pointer-events:none}
-  .centered{display:flex;align-items:center;justify-content:center}
-  .vstack{display:flex;flex-direction:column;gap:14px}
   .panel{background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(12px);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
-  .panel strong{color:var(--fg)}
   .title{font-weight:800;letter-spacing:3px;text-transform:uppercase}
   .glow{color:var(--accent);text-shadow:0 0 12px rgba(0,250,255,.55), 0 0 28px rgba(0,180,255,.3)}
   .sub{color:var(--muted)}
@@ -71,17 +68,12 @@
   .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
   .col-12{grid-column:span 12}
   .col-6{grid-column:span 6}
-  .col-4{grid-column:span 4}
   .opt{padding:10px;border-radius:12px;border:1px dashed var(--line)}
   .list{display:flex;flex-direction:column;gap:8px}
   .ship-card{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.02)}
   .ship-dot{width:14px;height:14px;border-radius:50%;box-shadow:0 0 14px currentColor}
-  .ship-card small{color:var(--muted)}
-
   .shop-item{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px}
   .shop-item .price{margin-left:auto}
-
-  .hidden{display:none}
 </style>
 </head>
 <body>
@@ -105,7 +97,7 @@
     <span id="ehpNum" class="badge">100%</span>
   </div>
   <div class="chip"><span class="money">Credits: </span><strong id="moneyVal" class="money">0</strong></div>
-  <div class="chip"><span class="badge">Press <span class="kbd">P</span> pause</span></div>
+  <div class="chip"><span class="badge">Press <span class="kbd">1..5</span> pick · <span class="kbd">Space</span> deploy · <span class="kbd">P</span> pause</span></div>
 </div>
 
 <div class="corner">
@@ -120,7 +112,7 @@
   <div class="modal panel">
     <div class="title-head row" style="margin-bottom:10px">
       <div class="logo glow">VOID <span class="accent">CLASH</span></div>
-      <span class="badge">v0.9 (single-file)</span>
+      <span class="badge">v1.0 (single-file)</span>
       <span class="right small">HTML5 · Canvas · No libs</span>
     </div>
     <div class="grid">
@@ -162,43 +154,28 @@
           <div class="title">Fleet Roster</div>
           <div class="list" style="margin-top:8px">
             <div class="ship-card">
-              <span class="ship-dot" style="background:#78f"></span>
-              <div>
-                <strong>Fighter</strong><br/>
-                <small>Cheap, fast, good vs bombers.</small>
-              </div>
+              <span class="ship-dot" style="background:#51d9ff"></span>
+              <div><strong>Fighter</strong><br/><small>Cheap, fast, good vs bombers.</small></div>
               <span class="badge right">Cost 2</span>
             </div>
             <div class="ship-card">
-              <span class="ship-dot" style="background:#9a5cff"></span>
-              <div>
-                <strong>Interceptor</strong><br/>
-                <small>Anti-air specialist, bonus vs Bomber/Frigate.</small>
-              </div>
+              <span class="ship-dot" style="background:#6a8bff"></span>
+              <div><strong>Interceptor</strong><br/><small>Arrowhead hunter; counters Bomber/Frigate.</small></div>
               <span class="badge right">Cost 3</span>
             </div>
             <div class="ship-card">
-              <span class="ship-dot" style="background:#ff6b9f"></span>
-              <div>
-                <strong>Bomber</strong><br/>
-                <small>Slow, heavy payload vs flagships. Weak to Fighters.</small>
-              </div>
+              <span class="ship-dot" style="background:#8be0ff"></span>
+              <div><strong>Bomber</strong><br/><small>Heavy chevron; huge flagship damage.</small></div>
               <span class="badge right">Cost 4</span>
             </div>
             <div class="ship-card">
               <span class="ship-dot" style="background:#50ffa8"></span>
-              <div>
-                <strong>Support Drone</strong><br/>
-                <small>Shield aura to nearby allies (+HP/sec).</small>
-              </div>
+              <div><strong>Support Drone</strong><br/><small>Orb shield aura; heals allies.</small></div>
               <span class="badge right">Cost 3</span>
             </div>
             <div class="ship-card">
               <span class="ship-dot" style="background:#ffd36b"></span>
-              <div>
-                <strong>Missile Frigate</strong><br/>
-                <small>Long-range homing missiles. Fragile if swarmed.</small>
-              </div>
+              <div><strong>Missile Frigate</strong><br/><small>Hex hull; long-range pods.</small></div>
               <span class="badge right">Cost 5</span>
             </div>
           </div>
@@ -206,7 +183,7 @@
       </div>
 
       <div class="col-12">
-        <div class="small">Tip: This build includes a fast heuristic AI. The tournament build will add Minimax with time-boxed iterative deepening.</div>
+        <div class="small">Tip: Fast heuristic AI today; swap-in Minimax later without changing UI.</div>
       </div>
     </div>
   </div>
@@ -223,11 +200,11 @@
       <div class="col-6">
         <div class="opt">
           <strong>Objective</strong>
-          <div class="small">Reduce the enemy flagship to 0 HP. Deploy ships using Energy (regens over time). Each ship auto-flies and fights.</div>
+          <div class="small">Reduce the enemy flagship to 0 HP. Deploy with Energy; ships auto-fight.</div>
           <div style="height:8px"></div>
           <strong>Controls</strong>
           <div class="small">
-            <div>• <span class="kbd">1..5</span> select ship type</div>
+            <div>• <span class="kbd">1..5</span> select ship</div>
             <div>• <span class="kbd">Space</span> deploy</div>
             <div>• <span class="kbd">P</span> pause</div>
             <div>• <span class="kbd">H</span> help</div>
@@ -237,16 +214,10 @@
       <div class="col-6">
         <div class="opt">
           <strong>Synergies</strong>
-          <div class="small">Fighter > Bomber; Interceptor > Bomber/Frigate; Drones buff allies; Bombers crush flagships if protected.</div>
+          <div class="small">Fighter > Bomber; Interceptor > Bomber/Frigate; Drones heal; escort Bombers.</div>
           <div style="height:8px"></div>
           <strong>Upgrades</strong>
-          <div class="small">Between rounds spend Credits on global buffs: damage, shields, energy regen, ship speed. Losing grants pity credits.</div>
-        </div>
-      </div>
-      <div class="col-12">
-        <div class="opt">
-          <strong>Theme</strong>
-          <div class="small">“AI sees ahead”: This version uses a greedy-with-lookahead heuristic. The next build swaps in Minimax + alpha-beta + ghost previews.</div>
+          <div class="small">Spend Credits between rounds on damage, HP, energy regen, or speed.</div>
         </div>
       </div>
     </div>
@@ -264,34 +235,22 @@
       <div class="col-6">
         <div class="list">
           <div class="shop-item">
-            <div>
-              <strong>⚔ Damage Matrix</strong><br/>
-              <small>+10% global damage</small>
-            </div>
+            <div><strong>⚔ Damage Matrix</strong><br/><small>+10% global damage</small></div>
             <span class="badge price">120</span>
             <button class="btn small right buy" data-upg="dmg">Buy</button>
           </div>
           <div class="shop-item">
-            <div>
-              <strong>🛡 Shield Lattice</strong><br/>
-              <small>+12% max HP</small>
-            </div>
+            <div><strong>🛡 Shield Lattice</strong><br/><small>+12% max HP</small></div>
             <span class="badge price">120</span>
             <button class="btn small right buy" data-upg="hp">Buy</button>
           </div>
           <div class="shop-item">
-            <div>
-              <strong>⚡ Reactor Overdrive</strong><br/>
-              <small>+15% energy regen</small>
-            </div>
+            <div><strong>⚡ Reactor Overdrive</strong><br/><small>+15% energy regen</small></div>
             <span class="badge price">140</span>
             <button class="btn small right buy" data-upg="erg">Buy</button>
           </div>
           <div class="shop-item">
-            <div>
-              <strong>🛞 Thruster Suite</strong><br/>
-              <small>+10% ship speed</small>
-            </div>
+            <div><strong>🛞 Thruster Suite</strong><br/><small>+10% ship speed</small></div>
             <span class="badge price">100</span>
             <button class="btn small right buy" data-upg="spd">Buy</button>
           </div>
@@ -307,7 +266,7 @@
           </div>
         </div>
       </div>
-      <div class="col-12 small">Tip: Each purchase stacks multiplicatively and persists across rounds this session.</div>
+      <div class="col-12 small">Purchases stack multiplicatively and persist across this session.</div>
     </div>
   </div>
 </div>
@@ -329,9 +288,7 @@
 <!-- GAME OVER -->
 <div id="gameover" class="overlay">
   <div class="modal panel">
-    <div class="title-head">
-      <div class="title glow">Battle Complete</div>
-    </div>
+    <div class="title-head"><div class="title glow">Battle Complete</div></div>
     <div class="grid">
       <div class="col-6">
         <div class="opt">
@@ -352,778 +309,402 @@
 
 <script>
 /* ===========================================================
-   VOID CLASH — Part 1: Full Scaffold + Playable Core (500+ lines)
+   VOID CLASH — Single-File Build (enhanced visuals)
    =========================================================== */
-
 (() => {
   "use strict";
 
-  // ---------------------------
   // Helpers
-  // ---------------------------
   const clamp = (v,min,max)=>v<min?min:(v>max?max:v);
-  const lerp = (a,b,t)=>a+(b-a)*t;
   const rand = (a,b)=>Math.random()*(b-a)+a;
-  const randi=(a,b)=>Math.floor(rand(a,b));
   const now = ()=>performance.now();
   const TAU = Math.PI*2;
 
-  // ---------------------------
   // Canvas
-  // ---------------------------
   const cv = document.getElementById('cv');
   const ctx = cv.getContext('2d');
-
   const DPR = Math.max(1, Math.min(2, window.devicePixelRatio||1));
-  function resize(){
-    cv.width = Math.floor(window.innerWidth * DPR);
-    cv.height = Math.floor(window.innerHeight * DPR);
-  }
-  window.addEventListener('resize', resize);
-  resize();
+  function resize(){ cv.width = Math.floor(window.innerWidth * DPR); cv.height = Math.floor(window.innerHeight * DPR); }
+  window.addEventListener('resize', resize); resize();
 
-  // ---------------------------
-  // Audio (minimal, safe fallback)
-  // ---------------------------
-  let masterVol = 0.6;
-  let audioCtx = null;
-  function initAudio(){
-    if(audioCtx) return;
-    try{
-      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    }catch(e){ audioCtx = null; }
-  }
+  // Audio
+  let masterVol = 0.6, audioCtx = null;
+  function initAudio(){ if(audioCtx) return; try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audioCtx = null; } }
   function beep(freq=440, dur=0.08, gain=0.08){
     if(!audioCtx || !Settings.sfx) return;
     const t = audioCtx.currentTime;
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = 'square'; o.frequency.value = freq;
-    g.gain.value = gain * masterVol;
-    o.connect(g).connect(audioCtx.destination);
-    o.start(t);
-    o.stop(t+dur);
+    const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    o.type='square'; o.frequency.value=freq; g.gain.value=gain*masterVol; o.connect(g).connect(audioCtx.destination);
+    o.start(t); o.stop(t+dur);
   }
 
-  // ---------------------------
   // Settings / State
-  // ---------------------------
-  const Settings = {
-    particles:true, bloom:true, shake:true, sfx:true,
-    difficulty:1, // 0 easy, 1 normal, 2 hard
-  };
-  const Player = {
-    hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.2, credits:0,
-    upgrades:{ dmg:0, hp:0, erg:0, spd:0 }
-  };
-  const Enemy = {
-    hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.1,
-    difficultyBias:1.0
-  };
-  let Round = 1;
-  let paused = false;
-  let inBattle = false;
-  let gameOver = false;
-  let showShopAfter = false;
+  const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
+  const Player = { hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.2, credits:0, upgrades:{dmg:0,hp:0,erg:0,spd:0} };
+  const Enemy  = { hpMax:1000, hp:1000, energy:0, energyMax:10, energyRegen:1.15, difficultyBias:1.0 };
+  let Round=1, paused=false, inBattle=false, gameOver=false;
 
-  // Apply difficulty multipliers
   function applyDifficulty(){
-    if(Settings.difficulty===0){ // Easy
-      Enemy.energyRegen = 1.0;
-      Enemy.difficultyBias = 0.9;
-      Player.hpMax = 1100;
-    }else if(Settings.difficulty===1){ // Normal
-      Enemy.energyRegen = 1.15;
-      Enemy.difficultyBias = 1.0;
-      Player.hpMax = 1000;
-    }else{ // Hard
-      Enemy.energyRegen = 1.3;
-      Enemy.difficultyBias = 1.15;
-      Player.hpMax = 950;
-    }
-    Player.hp = Player.hpMax;
-    Enemy.hpMax = Player.hpMax;
-    Enemy.hp = Enemy.hpMax;
+    if(Settings.difficulty===0){ Enemy.energyRegen=1.0;  Enemy.difficultyBias=0.9;  Player.hpMax=1100; }
+    else if(Settings.difficulty===1){ Enemy.energyRegen=1.15; Enemy.difficultyBias=1.0; Player.hpMax=1000; }
+    else{ Enemy.energyRegen=1.3; Enemy.difficultyBias=1.15; Player.hpMax=950; }
+    Player.hp=Player.hpMax; Enemy.hpMax=Player.hpMax; Enemy.hp=Enemy.hpMax;
   }
   applyDifficulty();
 
-  // ---------------------------
-  // Background: parallax stars & nebula
-  // ---------------------------
-  const starsFar = [], starsNear = [];
+  // Background
+  const starsFar=[], starsNear=[];
   function seedStars(){
-    starsFar.length = 0; starsNear.length = 0;
+    starsFar.length=0; starsNear.length=0;
     const nFar = Math.floor((cv.width*cv.height)/(8000*DPR));
-    const nNear = Math.floor((cv.width*cv.height)/(14000*DPR));
-    for(let i=0;i<nFar;i++){
-      starsFar.push({x:Math.random()*cv.width, y:Math.random()*cv.height, r:rand(0.4,1.2), s:rand(0.02,0.06)});
-    }
-    for(let i=0;i<nNear;i++){
-      starsNear.push({x:Math.random()*cv.width, y:Math.random()*cv.height, r:rand(0.8,2.2), s:rand(0.06,0.16)});
-    }
+    const nNear= Math.floor((cv.width*cv.height)/(14000*DPR));
+    for(let i=0;i<nFar;i++) starsFar.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:rand(0.4,1.2),s:rand(0.02,0.06)});
+    for(let i=0;i<nNear;i++) starsNear.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:rand(0.8,2.2),s:rand(0.06,0.16)});
   }
-  seedStars();
-  window.addEventListener('resize', seedStars);
+  seedStars(); window.addEventListener('resize', seedStars);
 
   function drawBackground(dt){
-    // subtle nebula gradient
-    const g = ctx.createRadialGradient(cv.width*0.5, cv.height*0.35, 80, cv.width*0.5, cv.height*0.5, Math.max(cv.width,cv.height)*0.9);
-    g.addColorStop(0,"rgba(0,200,255,0.08)");
-    g.addColorStop(0.4,"rgba(120,50,255,0.05)");
-    g.addColorStop(1,"rgba(0,0,0,0.0)");
-    ctx.fillStyle = g; ctx.fillRect(0,0,cv.width,cv.height);
+    const g=ctx.createRadialGradient(cv.width*0.5, cv.height*0.35, 80, cv.width*0.5, cv.height*0.5, Math.max(cv.width,cv.height)*0.9);
+    g.addColorStop(0,"rgba(0,200,255,0.08)"); g.addColorStop(0.45,"rgba(120,50,255,0.06)"); g.addColorStop(1,"rgba(0,0,0,0.0)");
+    ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
 
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle="#ffffff";
-    for(const s of starsFar){
-      s.y += s.s*dt*60;
-      if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; }
-      ctx.globalAlpha = 0.4;
-      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill();
-    }
-    for(const s of starsNear){
-      s.y += s.s*dt*60;
-      if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; }
-      ctx.globalAlpha = 0.8;
-      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation='lighter'; ctx.fillStyle="#ffffff";
+    for(const s of starsFar){ s.y+=s.s*dt*60; if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; } ctx.globalAlpha=0.4; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
+    for(const s of starsNear){ s.y+=s.s*dt*60; if(s.y>cv.height){ s.y=0; s.x=Math.random()*cv.width; } ctx.globalAlpha=0.85; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); }
+    ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
   }
 
-  // ---------------------------
   // Particles
-  // ---------------------------
-  const particles = [];
-  function spawnSpark(x,y,c="#aef",n=6,spd=1){
-    if(!Settings.particles) return;
-    for(let i=0;i<n;i++){
-      particles.push({x,y, vx:rand(-1,1)*spd, vy:rand(-1,1)*spd, life:rand(0.4,0.9), t:0, c});
-    }
-  }
-  function particleUpdate(dt){
-    for(let i=particles.length-1;i>=0;i--){
-      const p=particles[i];
-      p.t+=dt; p.x+=p.vx*dt*60; p.y+=p.vy*dt*60; p.vy+=0.02*dt*60;
-      if(p.t>p.life){ particles.splice(i,1); }
-    }
-  }
-  function particleDraw(){
-    if(!Settings.particles) return;
-    ctx.globalCompositeOperation = 'lighter';
-    for(const p of particles){
-      const a = 1 - (p.t/p.life);
-      ctx.globalAlpha = a;
-      ctx.fillStyle = p.c;
-      ctx.fillRect(p.x-1,p.y-1,2,2);
-    }
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-  }
+  const particles=[];
+  function spawnSpark(x,y,c="#aef",n=6,spd=1){ if(!Settings.particles) return; for(let i=0;i<n;i++) particles.push({x,y,vx:rand(-1,1)*spd,vy:rand(-1,1)*spd,life:rand(0.4,0.9),t:0,c}); }
+  function thruster(x,y,dx,dy,c="#aef",n=2){ if(!Settings.particles) return; for(let i=0;i<n;i++) particles.push({x:x+dx*2,y:y+dy*2,vx:dx*rand(-0.2,0.2),vy:dy*rand(0.8,1.4),life:rand(0.2,0.5),t:0,c}); }
+  function particleUpdate(dt){ for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.t+=dt; p.x+=p.vx*dt*60; p.y+=p.vy*dt*60; p.vy+=0.02*dt*60; if(p.t>p.life) particles.splice(i,1); } }
+  function particleDraw(){ if(!Settings.particles) return; ctx.globalCompositeOperation='lighter'; for(const p of particles){ const a=1-(p.t/p.life); ctx.globalAlpha=a; ctx.fillStyle=p.c; ctx.fillRect(p.x-1,p.y-1,2,2);} ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over'; }
 
-  // ---------------------------
   // Camera & Shake
-  // ---------------------------
-  const Cam = { x:0,y:0, shake:0 };
-  function addShake(s=6){ if(Settings.shake) Cam.shake = Math.min(12, Cam.shake + s); }
-  function applyCamera(){
-    let sx = 0, sy = 0;
-    if(Cam.shake>0){
-      sx = rand(-Cam.shake,Cam.shake);
-      sy = rand(-Cam.shake,Cam.shake);
-      Cam.shake *= 0.9;
-      if(Cam.shake < 0.2) Cam.shake=0;
-    }
-    ctx.setTransform(1,0,0,1, sx, sy);
-  }
+  const Cam={shake:0};
+  function addShake(s=6){ if(Settings.shake) Cam.shake=Math.min(12,Cam.shake+s); }
+  function applyCamera(){ let sx=0,sy=0; if(Cam.shake>0){ sx=rand(-Cam.shake,Cam.shake); sy=rand(-Cam.shake,Cam.shake); Cam.shake*=0.9; if(Cam.shake<0.2) Cam.shake=0; } ctx.setTransform(1,0,0,1,sx,sy); }
   function resetCamera(){ ctx.setTransform(1,0,0,1,0,0); }
 
-  // ---------------------------
-  // Entities: Flagships, Ships, Bullets
-  // ---------------------------
-  const bullets = [];
-  const ships = []; // both sides
-  const TEAM = { PLAYER:1, ENEMY:2 };
+  // Entities
+  const bullets=[], ships=[];
+  const TEAM={PLAYER:1, ENEMY:2};
+  const TEAM_COLOR = (team)=> team===TEAM.PLAYER ? '#51d9ff' : '#ff4d7a';
+  const TEAM_GLOW  = (team)=> team===TEAM.PLAYER ? 'rgba(0,245,255,.32)' : 'rgba(255,77,122,.32)';
+  const TYPE_ACCENT = { Fighter:"#70d7ff", Interceptor:"#6a8bff", Bomber:"#8be0ff", Drone:"#50ffa8", Frigate:"#ffd36b" };
 
   const BASE_STATS = {
-    Fighter:     { hp:36,   dmg:9,   spd:1.6,  rof:0.6, cost:2,  range:90,  color:"#78f" },
-    Interceptor: { hp:44,   dmg:8,   spd:2.0,  rof:0.5, cost:3,  range:100, color:"#9a5cff" },
-    Bomber:      { hp:90,   dmg:28,  spd:1.0,  rof:1.2, cost:4,  range:70,  color:"#ff6b9f" },
-    Drone:       { hp:52,   dmg:0,   spd:1.3,  rof:1.4, cost:3,  range:0,   color:"#50ffa8" },
-    Frigate:     { hp:70,   dmg:16,  spd:1.2,  rof:0.8, cost:5,  range:180, color:"#ffd36b" },
+    Fighter:     { hp:36,  dmg:9,  spd:1.65, rof:0.58, cost:2, range:92  },
+    Interceptor: { hp:44,  dmg:8,  spd:2.00, rof:0.50, cost:3, range:102 },
+    Bomber:      { hp:96,  dmg:28, spd:1.00, rof:1.20, cost:4, range:70  },
+    Drone:       { hp:52,  dmg:0,  spd:1.25, rof:1.40, cost:3, range:0   },
+    Frigate:     { hp:72,  dmg:16, spd:1.20, rof:0.78, cost:5, range:185 },
   };
 
-  const Selected = { type:'Fighter' };
-  const ORDER = ['Fighter','Interceptor','Bomber','Drone','Frigate'];
+  const Selected={type:'Fighter'};
+  const ORDER=['Fighter','Interceptor','Bomber','Drone','Frigate'];
 
-  const Flagship = {
-    p:{ x:cv.width*0.5, y:cv.height-100, w:180, h:24, team:TEAM.PLAYER},
-    e:{ x:cv.width*0.5, y:100,           w:180, h:24, team:TEAM.ENEMY}
-  };
-  window.addEventListener('resize', ()=>{
-    Flagship.p.x = cv.width*0.5;
-    Flagship.e.x = cv.width*0.5;
-    Flagship.p.y = cv.height-100;
-    Flagship.e.y = 100;
-  });
+  const Flagship={ p:{x:cv.width*0.5,y:cv.height-110,w:200,h:28,team:TEAM.PLAYER}, e:{x:cv.width*0.5,y:110,w:200,h:28,team:TEAM.ENEMY} };
+  window.addEventListener('resize', ()=>{ Flagship.p.x=cv.width*0.5; Flagship.e.x=cv.width*0.5; Flagship.p.y=cv.height-110; Flagship.e.y=110; });
 
-  function teamMult(team){ return team===TEAM.PLAYER?1:-1; }
+  function teamMult(t){ return t===TEAM.PLAYER?1:-1; }
 
-  function makeShip(type, team){
-    const b = BASE_STATS[type];
-    const hpUp = 1 + Player.upgrades.hp*0.12;
-    const dmgUp = 1 + Player.upgrades.dmg*0.10;
-    const spdUp = 1 + Player.upgrades.spd*0.10;
-
-    const s = {
-      type, team,
-      x: team===TEAM.PLAYER ? Flagship.p.x + rand(-60,60) : Flagship.e.x + rand(-60,60),
-      y: team===TEAM.PLAYER ? Flagship.p.y-40 : Flagship.e.y+40,
-      vx:0, vy:-b.spd * teamMult(team) * spdUp,
-      hp: Math.floor(b.hp*hpUp), hpMax: Math.floor(b.hp*hpUp),
-      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range, color:b.color
+  function makeShip(type,team){
+    const b=BASE_STATS[type];
+    const hpUp=1+Player.upgrades.hp*0.12, dmgUp=1+Player.upgrades.dmg*0.10, spdUp=1+Player.upgrades.spd*0.10;
+    const s={ type, team,
+      x: team===TEAM.PLAYER ? Flagship.p.x+rand(-60,60) : Flagship.e.x+rand(-60,60),
+      y: team===TEAM.PLAYER ? Flagship.p.y-46 : Flagship.e.y+46,
+      vx:0, vy:-b.spd*teamMult(team)*spdUp,
+      hp:Math.floor(b.hp*hpUp), hpMax:Math.floor(b.hp*hpUp),
+      rof:b.rof, cd:0, dmg:Math.floor(b.dmg*dmgUp), range:b.range
     };
-    ships.push(s);
-    spawnSpark(s.x,s.y,s.color,8,1.2);
-    beep(540,0.05,0.05);
-    return s;
+    ships.push(s); spawnSpark(s.x,s.y,TEAM_COLOR(team),10,1.3); beep(team===TEAM.PLAYER?540:500,0.05,0.05); return s;
   }
 
-  function fireBullet(from, towardX, towardY, speed=4, dmg=null){
-    const ang = Math.atan2(towardY-from.y, towardX-from.x);
-    const v =  speed;
-    const d = (dmg==null? from.dmg : dmg);
-    bullets.push({
-      x:from.x, y:from.y,
-      vx:Math.cos(ang)*v, vy:Math.sin(ang)*v,
-      team: from.team, dmg:d, life:2.5, color:from.color
-    });
-    if(Settings.particles) spawnSpark(from.x,from.y,from.color,4,0.6);
-    beep(from.team===TEAM.PLAYER?820:700,0.04,0.035);
+  function fireBullet(from,tx,ty,speed=4.6,dmg=null){
+    const a=Math.atan2(ty-from.y, tx-from.x), v=speed, d=(dmg==null?from.dmg:dmg);
+    bullets.push({x:from.x,y:from.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,team:from.team,dmg:d,life:2.5});
+    spawnSpark(from.x,from.y,TEAM_COLOR(from.team),4,0.7); beep(from.team===TEAM.PLAYER?820:700,0.04,0.035);
   }
 
   function collideRectCircle(rx,ry,rw,rh,cx,cy,cr){
-    const tx = clamp(cx, rx, rx+rw);
-    const ty = clamp(cy, ry, ry+rh);
-    const dx = cx - tx, dy = cy - ty;
-    return dx*dx + dy*dy <= cr*cr;
+    const tx=clamp(cx,rx,rx+rw), ty=clamp(cy,ry,ry+rh), dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr;
   }
 
   function shipUpdate(dt){
     for(let i=ships.length-1;i>=0;i--){
-      const s = ships[i];
-      s.y += s.vy*dt*60;
+      const s=ships[i]; s.y+=s.vy*dt*60;
 
-      // Drone aura
       if(s.type==='Drone'){
-        for(const t of ships){
-          if(t.team===s.team && t!==s){
-            const dy = Math.abs(t.y-s.y), dx=Math.abs(t.x-s.x);
-            if(dy<80 && dx<80 && t.hp>0){
-              t.hp = Math.min(t.hpMax, t.hp + 5*dt); // regen
-            }
-          }
-        }
-      }
-
-      // target
-      s.cd -= dt;
-      let tx=null, ty=null, tg=null;
-      // prefer nearest enemy ship
-      let bestD=Infinity;
-      for(const o of ships){
-        if(o.team!==s.team){
-          const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy;
-          if(d<bestD){ bestD=d; tg=o; }
-        }
-      }
-      // fallback to flagship
-      const fs = (s.team===TEAM.PLAYER? Flagship.e : Flagship.p);
-      if(!tg){
-        tx=fs.x; ty=fs.y;
+        for(const t of ships){ if(t.team===s.team && t!==s){ const dy=Math.abs(t.y-s.y), dx=Math.abs(t.x-s.x); if(dy<84 && dx<84 && t.hp>0) t.hp=Math.min(t.hpMax, t.hp+6*dt);} }
+        thruster(s.x, s.y+(s.team===TEAM.PLAYER?10:-10), 0, 0.7*(s.team===TEAM.PLAYER?1:-1), TEAM_COLOR(s.team), 1);
       }else{
-        tx=tg.x; ty=tg.y;
+        thruster(s.x, s.y+(s.team===TEAM.PLAYER?10:-10), 0, 0.5*(s.team===TEAM.PLAYER?1:-1), TEAM_COLOR(s.team), 1);
       }
 
-      // attack if in range
-      if(s.type!=='Drone'){
-        const dy = Math.abs((ty)-(s.y));
-        if(dy < s.range && s.cd<=0){
-          s.cd = s.rof;
-          fireBullet(s, tx, ty, s.type==='Frigate'? 5.4 : (s.type==='Bomber'?3.8:5.0));
-        }
-      }
+      s.cd-=dt; let tg=null, bestD=Infinity;
+      for(const o of ships){ if(o.team!==s.team){ const dx=o.x-s.x, dy=o.y-s.y, d=dx*dx+dy*dy; if(d<bestD){bestD=d; tg=o;} } }
+      const fs=(s.team===TEAM.PLAYER?Flagship.e:Flagship.p); const tx=tg?tg.x:fs.x, ty=tg?tg.y:fs.y;
+      if(s.type!=='Drone'){ const dy=Math.abs(ty-s.y); if(dy<s.range && s.cd<=0){ s.cd=s.rof; fireBullet(s,tx,ty, s.type==='Frigate'?5.6:(s.type==='Bomber'?3.9:5.2)); } }
 
-      // remove out-of-bounds or dead
-      if(s.hp<=0 || s.y< -60 || s.y>cv.height+60){
-        if(s.hp<=0){
-          spawnSpark(s.x,s.y,s.color,10,1.6);
-          addShake(3.5);
-          beep(160,0.06,0.06);
-        }
-        ships.splice(i,1);
-      }
+      if(s.hp<=0 || s.y<-60 || s.y>cv.height+60){ if(s.hp<=0){ spawnSpark(s.x,s.y,TEAM_COLOR(s.team),16,1.8); addShake(3.5); beep(160,0.06,0.06);} ships.splice(i,1); }
     }
   }
 
-  function shipDraw(){
-    for(const s of ships){
-      // glow
-      if(Settings.bloom){
-        ctx.globalAlpha=0.35;
-        ctx.fillStyle = s.color;
-        ctx.beginPath(); ctx.arc(s.x, s.y, 14, 0, TAU); ctx.fill();
-        ctx.globalAlpha=1;
+  function drawShipBody(s){
+    const stroke=TEAM_COLOR(s.team), glow=TEAM_GLOW(s.team), accent=TYPE_ACCENT[s.type]||stroke;
+    if(Settings.bloom){ ctx.globalAlpha=0.25; ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(s.x,s.y,16,0,TAU); ctx.fill(); ctx.globalAlpha=1; }
+    ctx.lineWidth=2*DPR; ctx.strokeStyle=stroke; ctx.beginPath();
+    switch(s.type){
+      case 'Fighter':{
+        const up=(s.team===TEAM.PLAYER);
+        if(up){ ctx.moveTo(s.x, s.y-12); ctx.lineTo(s.x-9, s.y+10); ctx.lineTo(s.x+9, s.y+10); }
+        else   { ctx.moveTo(s.x, s.y+12); ctx.lineTo(s.x-9, s.y-10); ctx.lineTo(s.x+9, s.y-10); }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR; ctx.beginPath(); ctx.moveTo(s.x, s.y+(up?6:-6)); ctx.lineTo(s.x, s.y+(up?-10:10)); ctx.stroke();
+        break;
       }
-      // body
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = 2*DPR;
-      ctx.beginPath();
-      if(s.team===TEAM.PLAYER){
-        ctx.moveTo(s.x, s.y-10); ctx.lineTo(s.x-8, s.y+10); ctx.lineTo(s.x+8, s.y+10); ctx.closePath();
-      }else{
-        ctx.moveTo(s.x, s.y+10); ctx.lineTo(s.x-8, s.y-10); ctx.lineTo(s.x+8, s.y-10); ctx.closePath();
+      case 'Interceptor':{
+        const up=(s.team===TEAM.PLAYER);
+        ctx.moveTo(s.x, s.y+(up?-12:12)); ctx.lineTo(s.x-12, s.y); ctx.lineTo(s.x, s.y+(up?12:-12)); ctx.lineTo(s.x+12, s.y); ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.beginPath();
+        ctx.moveTo(s.x-12, s.y); ctx.lineTo(s.x-18, s.y+(up?6:-6));
+        ctx.moveTo(s.x+12, s.y); ctx.lineTo(s.x+18, s.y+(up?6:-6)); ctx.stroke();
+        break;
       }
-      ctx.stroke();
-
-      // hp bar
-      const w=24,h=4;
-      ctx.fillStyle='rgba(255,255,255,.08)';
-      ctx.fillRect(s.x-w/2, s.y-18, w, h);
-      ctx.fillStyle=s.color;
-      ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
+      case 'Bomber':{
+        const up=(s.team===TEAM.PLAYER);
+        if(up){ ctx.moveTo(s.x-14, s.y+8); ctx.lineTo(s.x, s.y-12); ctx.lineTo(s.x+14, s.y+8); }
+        else  { ctx.moveTo(s.x-14, s.y-8); ctx.lineTo(s.x, s.y+12); ctx.lineTo(s.x+14, s.y-8); }
+        ctx.stroke();
+        ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR; ctx.beginPath(); ctx.moveTo(s.x-10, s.y+(up?5:-5)); ctx.lineTo(s.x+10, s.y+(up?5:-5)); ctx.stroke();
+        break;
+      }
+      case 'Drone':{
+        ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, TAU); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.globalAlpha=0.8; ctx.beginPath(); ctx.ellipse(s.x, s.y, 13, 6, (now()*0.002)%Math.PI, 0, TAU); ctx.stroke(); ctx.globalAlpha=1;
+        break;
+      }
+      case 'Frigate':{
+        const r=12;
+        for(let i=0;i<6;i++){ const a=Math.PI/6 + i*TAU/6 + (s.team===TEAM.PLAYER?0:Math.PI); const px=s.x+Math.cos(a)*r, py=s.y+Math.sin(a)*r; if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); }
+        ctx.closePath(); ctx.stroke();
+        ctx.strokeStyle=accent; ctx.beginPath();
+        ctx.moveTo(s.x-8, s.y+(s.team===TEAM.PLAYER?10:-10)); ctx.lineTo(s.x-14, s.y+(s.team===TEAM.PLAYER?14:-14));
+        ctx.moveTo(s.x+8, s.y+(s.team===TEAM.PLAYER?10:-10)); ctx.lineTo(s.x+14, s.y+(s.team===TEAM.PLAYER?14:-14)); ctx.stroke();
+        break;
+      }
     }
+    const w=24,h=4; ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(s.x-w/2, s.y-18, w, h);
+    ctx.fillStyle=stroke; ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
   }
+  function shipDraw(){ for(const s of ships) drawShipBody(s); }
 
+  // Bullets
   function bulletsUpdate(dt){
     for(let i=bullets.length-1;i>=0;i--){
-      const b = bullets[i];
-      b.x += b.vx*dt*60; b.y += b.vy*dt*60; b.life-=dt;
+      const b=bullets[i]; b.x+=b.vx*dt*60; b.y+=b.vy*dt*60; b.life-=dt;
       if(b.life<=0){ bullets.splice(i,1); continue; }
-
-      // hit ships
       let hit=false;
-      for(const s of ships){
-        if(s.team!==b.team && Math.hypot(s.x-b.x, s.y-b.y) < 12){
-          s.hp -= b.dmg; hit=true;
-          spawnSpark(b.x,b.y,b.color,6,1.2);
-          break;
-        }
-      }
-      // hit flagship
-      const fs = b.team===TEAM.PLAYER? Flagship.e : Flagship.p;
-      const rx = fs.x - fs.w*0.5, ry=fs.y - fs.h*0.5;
-      if(!hit && collideRectCircle(rx,ry,fs.w,fs.h,b.x,b.y,8)){
-        if(b.team===TEAM.PLAYER){ Enemy.hp -= Math.floor(b.dmg*1.3); }
-        else { Player.hp -= Math.floor(b.dmg*1.3); }
-        hit=true; addShake(5);
-        spawnSpark(b.x,b.y,b.color,10,1.6);
-        beep(220,0.06,0.07);
-      }
+      for(const s of ships){ if(s.team!==b.team && Math.hypot(s.x-b.x,s.y-b.y)<12){ s.hp-=b.dmg; hit=true; spawnSpark(b.x,b.y,TEAM_COLOR(b.team),8,1.3); break; } }
+      const fs=b.team===TEAM.PLAYER?Flagship.e:Flagship.p; const rx=fs.x-fs.w*0.5, ry=fs.y-fs.h*0.5;
+      if(!hit && collideRectCircle(rx,ry,fs.w,fs.h,b.x,b.y,8)){ if(b.team===TEAM.PLAYER) Enemy.hp-=Math.floor(b.dmg*1.3); else Player.hp-=Math.floor(b.dmg*1.3); hit=true; addShake(5); spawnSpark(b.x,b.y,TEAM_COLOR(b.team),12,1.8); beep(220,0.06,0.07); }
       if(hit){ bullets.splice(i,1); continue; }
-
-      // offscreen
-      if(b.x<-20||b.x>cv.width+20||b.y<-40||b.y>cv.height+40){ bullets.splice(i,1); }
+      if(b.x<-20||b.x>cv.width+20||b.y<-40||b.y>cv.height+40) bullets.splice(i,1);
     }
   }
   function bulletsDraw(){
     ctx.globalCompositeOperation='lighter';
-    for(const b of bullets){
-      ctx.strokeStyle=b.color; ctx.lineWidth=2*DPR;
-      ctx.beginPath();
-      ctx.moveTo(b.x - b.vx*0.8, b.y - b.vy*0.8);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    }
+    for(const b of bullets){ const c=TEAM_COLOR(b.team); ctx.strokeStyle=c; ctx.lineWidth=2.4*DPR; ctx.beginPath(); ctx.moveTo(b.x-b.vx*0.9, b.y-b.vy*0.9); ctx.lineTo(b.x,b.y); ctx.stroke(); }
     ctx.globalCompositeOperation='source-over';
   }
 
-  function drawFlagship(fs, hpRatio, color="#0ff"){
-    const rx = fs.x - fs.w*0.5, ry=fs.y - fs.h*0.5;
-    if(Settings.bloom){
-      ctx.globalAlpha=.25; ctx.fillStyle=color;
-      ctx.fillRect(rx-6,ry-10,fs.w+12,fs.h+20);
-      ctx.globalAlpha=1;
-    }
-    ctx.strokeStyle=color; ctx.lineWidth=3*DPR;
-    ctx.strokeRect(rx,ry,fs.w,fs.h);
-
-    // HP segments
-    ctx.fillStyle="rgba(255,255,255,.06)";
-    ctx.fillRect(rx,ry-10,fs.w,6);
-    ctx.fillStyle=color;
-    ctx.fillRect(rx,ry-10,fs.w*hpRatio,6);
+  // Flagships
+  function drawFlagship(fs, hpRatio, color){
+    const rx=fs.x-fs.w*0.5, ry=fs.y-fs.h*0.5;
+    if(Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle=color; ctx.fillRect(rx-8,ry-12,fs.w+16,fs.h+24); ctx.globalAlpha=1; }
+    ctx.strokeStyle=color; ctx.lineWidth=3*DPR; ctx.beginPath();
+    ctx.moveTo(rx, ry); ctx.lineTo(rx+fs.w*0.85, ry); ctx.lineTo(rx+fs.w, ry+fs.h*0.5);
+    ctx.lineTo(rx+fs.w*0.85, ry+fs.h); ctx.lineTo(rx, ry+fs.h); ctx.closePath(); ctx.stroke();
+    ctx.globalAlpha=0.4; ctx.fillStyle=color; ctx.beginPath(); ctx.ellipse(rx-10, ry+fs.h/2, 10, 24, 0, 0, TAU); ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle="rgba(255,255,255,.06)"; ctx.fillRect(rx,ry-12,fs.w,6);
+    ctx.fillStyle=color; ctx.fillRect(rx,ry-12,fs.w*hpRatio,6);
   }
 
-  // ---------------------------
   // Economy / Deploy
-  // ---------------------------
-  function energyRegenFactor(){
-    const base = Player.energyRegen * (1+Player.upgrades.erg*0.15);
-    return base;
-  }
-
-  function gainCredits(n){ Player.credits += n; setMoneyHUD(); }
+  function energyRegenFactor(){ return Player.energyRegen*(1+Player.upgrades.erg*0.15); }
+  function gainCredits(n){ Player.credits+=n; setMoneyHUD(); }
   function spendCredits(n){ if(Player.credits>=n){ Player.credits-=n; setMoneyHUD(); return true; } return false; }
+  function canAfford(type){ return Player.energy>=BASE_STATS[type].cost; }
+  function payEnergy(type){ Player.energy=Math.max(0, Player.energy-BASE_STATS[type].cost); }
 
-  function canAfford(type){
-    return Player.energy >= BASE_STATS[type].cost;
-  }
-  function payEnergy(type){
-    Player.energy -= BASE_STATS[type].cost;
-    Player.energy = Math.max(0, Player.energy);
-  }
-
-  // ---------------------------
-  // AI (greedy + simple lookahead)
-  // ---------------------------
+  // AI
   function aiBestChoice(){
-    // If cannot afford anything, pass
-    const options = ORDER.filter(t=> Enemy.energy>=BASE_STATS[t].cost*Enemy.difficultyBias);
-    if(options.length===0) return null;
-
-    // Evaluate each by simple heuristic:
-    // value = pressureOnPlayer + counterWeight - costWeight
-    let best=null, bestScore=-1e9;
+    const options=ORDER.filter(t=> Enemy.energy>=BASE_STATS[t].cost*Enemy.difficultyBias);
+    if(options.length===0) return null; let best=null,bestScore=-1e9;
     for(const t of options){
-      const st = BASE_STATS[t];
-      const cost = st.cost;
-      let score = (st.dmg*2 + st.hp*0.6 + st.spd*20) - cost*10;
-      // counters: prefer Interceptor if player has Bombers or Frigates visible
-      const bombs = ships.filter(s=>s.team===TEAM.PLAYER && (s.type==='Bomber'||s.type==='Frigate')).length;
-      const fighters = ships.filter(s=>s.team===TEAM.PLAYER && s.type==='Fighter').length;
-      if(t==='Interceptor') score += bombs*30;
-      if(t==='Fighter') score += Math.max(0, bombs-1)*12;
-      if(t==='Drone') score += (ships.filter(s=>s.team===TEAM.ENEMY).length>=3)?20:0;
-      if(t==='Bomber') score += (Enemy.energy>6?15:0); // save for big hit
-      if(t==='Frigate') score += 8;
-
-      // small lookahead: estimate flagship damage over next 3s
-      score += st.dmg * (st.type==='Frigate'?3.5:2.0);
+      const st=BASE_STATS[t]; let score=(st.dmg*2 + st.hp*0.6 + st.spd*20) - st.cost*10;
+      const bombs=ships.filter(s=>s.team===TEAM.PLAYER && (s.type==='Bomber'||s.type==='Frigate')).length;
+      if(t==='Interceptor') score+=bombs*30;
+      if(t==='Fighter') score+=Math.max(0,bombs-1)*12;
+      if(t==='Drone') score+=(ships.filter(s=>s.team===TEAM.ENEMY).length>=3)?20:0;
+      if(t==='Bomber') score+=(Enemy.energy>6?15:0);
+      if(t==='Frigate') score+=8;
+      score+=st.dmg*(t==='Frigate'?3.5:2.0);
       if(score>bestScore){ bestScore=score; best=t; }
     }
     return best;
   }
-
+  const AIState={timer:1.0};
   function aiTick(dt){
-    Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + Enemy.energyRegen*dt);
-    // attempt deploy ~ every 0.7–1.1s contingent on energy
-    AIState.timer -= dt;
+    Enemy.energy=Math.min(Enemy.energyMax, Enemy.energy+Enemy.energyRegen*dt);
+    AIState.timer-=dt;
     if(AIState.timer<=0){
-      AIState.timer = rand(0.7,1.1) * (Settings.difficulty===2?0.9:1);
-      const choice = aiBestChoice();
-      if(choice){
-        Enemy.energy -= BASE_STATS[choice].cost*Enemy.difficultyBias;
-        makeShip(choice, TEAM.ENEMY);
-      }
+      AIState.timer=rand(0.7,1.1)*(Settings.difficulty===2?0.9:1);
+      const choice=aiBestChoice();
+      if(choice){ Enemy.energy-=BASE_STATS[choice].cost*Enemy.difficultyBias; makeShip(choice,TEAM.ENEMY); }
     }
   }
-  const AIState = { timer:1.0 };
 
-  // ---------------------------
   // Input / UI
-  // ---------------------------
-  const Keys = {};
-  window.addEventListener('keydown', (e)=>{
+  const Keys={};
+  window.addEventListener('keydown', e=>{
     Keys[e.code]=true;
-    if(e.code==='KeyP'){ togglePause(); }
-    if(e.code==='KeyH'){ openHelp(); }
-    if(e.code==='Space'){ tryDeploy(); }
+    if(e.code==='KeyP') togglePause();
+    if(e.code==='KeyH') openHelp();
+    if(e.code==='Space') tryDeploy();
     if(e.code==='Digit1') selectType('Fighter');
     if(e.code==='Digit2') selectType('Interceptor');
     if(e.code==='Digit3') selectType('Bomber');
     if(e.code==='Digit4') selectType('Drone');
     if(e.code==='Digit5') selectType('Frigate');
   });
-  window.addEventListener('keyup', (e)=>{ Keys[e.code]=false; });
+  window.addEventListener('keyup', e=>{ Keys[e.code]=false; });
 
-  function selectType(t){
-    Selected.type = t;
-    showToast(`Selected ${t}`);
-    beep(900,0.03,0.04);
-  }
+  function selectType(t){ Selected.type=t; showToast(`Selected ${t}`); beep(900,0.03,0.04); }
+  function tryDeploy(){ if(!inBattle||paused) return; const t=Selected.type; if(canAfford(t)){ payEnergy(t); makeShip(t,TEAM.PLAYER); } else { showToast(`Need ${BASE_STATS[t].cost} energy`); beep(220,0.06,0.05); } }
 
-  function tryDeploy(){
-    if(!inBattle || paused) return;
-    const t = Selected.type;
-    if(canAfford(t)){
-      payEnergy(t);
-      makeShip(t, TEAM.PLAYER);
-    }else{
-      showToast(`Need ${BASE_STATS[t].cost} energy`);
-      beep(220,0.06,0.05);
-    }
-  }
-
-  // ---------------------------
   // Round / Flow
-  // ---------------------------
   function resetRound(){
     ships.length=0; bullets.length=0; particles.length=0;
-    Player.energy = 0; Enemy.energy = 0;
-    Player.hp = Player.hpMax; Enemy.hp = Enemy.hpMax;
-    AIState.timer = 1.0;
-    inBattle = true; gameOver=false; paused=false;
-    updateHUD();
+    Player.energy=0; Enemy.energy=0; Player.hp=Player.hpMax; Enemy.hp=Enemy.hpMax;
+    AIState.timer=1.0; inBattle=true; gameOver=false; paused=false; updateHUD();
   }
-
   function endBattle(victory){
     inBattle=false; gameOver=true;
-    const dmgDealt = Math.max(0, Enemy.hpMax-Enemy.hp);
-    const dmgTaken = Math.max(0, Player.hpMax-Player.hp);
-    let reward = victory ? (180 + Round*30) : (60 + Round*12);
+    const dealt=Math.max(0,Enemy.hpMax-Enemy.hp), taken=Math.max(0,Player.hpMax-Player.hp);
+    const reward= victory ? (180+Round*30) : (60+Round*12);
     gainCredits(reward);
-    document.getElementById('resultText').textContent = victory? "Victory" : "Defeat";
-    document.getElementById('statsText').textContent =
-      `Round ${Round} — Damage Dealt: ${dmgDealt} · Damage Taken: ${dmgTaken} · Reward: +${reward}c`;
-    showOverlay('gameover', true);
-    showShopAfter = victory;
-    beep(victory? 880:220,0.2,0.08);
-    addShake(10);
+    $('resultText').textContent= victory? "Victory":"Defeat";
+    $('statsText').textContent=`Round ${Round} — Damage Dealt: ${dealt} · Damage Taken: ${taken} · Reward: +${reward}c`;
+    showOverlay('gameover',true); beep(victory?880:220,0.2,0.08); addShake(10);
   }
+  function startFromTitle(){ $('title').classList.remove('show'); Round=1; resetRound(); }
+  function nextRound(){ Round++; Enemy.energyRegen*=1.06; Enemy.hpMax=Math.floor(Enemy.hpMax*1.05); Enemy.hp=Enemy.hpMax; Player.hp=Player.hpMax; resetRound(); showOverlay('gameover',false); }
 
-  function startFromTitle(){
-    document.getElementById('title').classList.remove('show');
-    Round = 1;
-    resetRound();
-  }
-
-  function nextRound(){
-    Round++;
-    // ramp difficulty slightly
-    Enemy.energyRegen *= 1.06;
-    Enemy.hpMax = Math.floor(Enemy.hpMax*1.05); Enemy.hp = Enemy.hpMax;
-    Player.hp = Player.hpMax;
-    resetRound();
-    showOverlay('gameover', false);
-  }
-
-  // ---------------------------
-  // DOM Control
-  // ---------------------------
-  const $ = (id)=>document.getElementById(id);
+  // DOM / HUD
+  const $=id=>document.getElementById(id);
   function showOverlay(id,show=true){ $(id).classList.toggle('show',show); }
-  function togglePause(){
-    if(!inBattle) return;
-    paused = !paused;
-    showOverlay('pause', paused);
-    beep(400,0.05,0.05);
-  }
-  function openHelp(){ showOverlay('help', true); }
-  function closeHelp(){ showOverlay('help', false); }
+  function togglePause(){ if(!inBattle) return; paused=!paused; showOverlay('pause',paused); beep(400,0.05,0.05); }
+  function openHelp(){ showOverlay('help',true); }
+  function closeHelp(){ showOverlay('help',false); }
 
-  function setEnergyHUD(){
-    const f = (Player.energy/Player.energyMax);
-    $('energyFill').style.width = (f*100).toFixed(0)+'%';
-    $('energyNum').textContent = `${Math.floor(Player.energy)}/${Player.energyMax}`;
-  }
-  function setHPHUD(){
-    const r = (Player.hp/Player.hpMax);
-    $('hpFill').style.width = (r*100).toFixed(0)+'%';
-    $('hpNum').textContent = `${Math.max(0,Math.floor(r*100))}%`;
-    const rr = (Enemy.hp/Enemy.hpMax);
-    $('ehpFill').style.width = (rr*100).toFixed(0)+'%';
-    $('ehpNum').textContent = `${Math.max(0,Math.floor(rr*100))}%`;
-  }
-  function setRoundHUD(){ $('roundVal').textContent = Round; }
-  function setMoneyHUD(){ $('moneyVal').textContent = Player.credits; $('shopCredits').textContent = Player.credits; }
+  function setEnergyHUD(){ const f=(Player.energy/Player.energyMax); $('energyFill').style.width=(f*100).toFixed(0)+'%'; $('energyNum').textContent=`${Math.floor(Player.energy)}/${Player.energyMax}`; }
+  function setHPHUD(){ const r=(Player.hp/Player.hpMax); $('hpFill').style.width=(r*100).toFixed(0)+'%'; $('hpNum').textContent=`${Math.max(0,Math.floor(r*100))}%`; const rr=(Enemy.hp/Enemy.hpMax); $('ehpFill').style.width=(rr*100).toFixed(0)+'%'; $('ehpNum').textContent=`${Math.max(0,Math.floor(rr*100))}%`; }
+  function setRoundHUD(){ $('roundVal').textContent=Round; }
+  function setMoneyHUD(){ $('moneyVal').textContent=Player.credits; $('shopCredits').textContent=Player.credits; }
   function updateHUD(){ setEnergyHUD(); setHPHUD(); setRoundHUD(); setMoneyHUD(); }
+  function showToast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2000); }
 
-  function showToast(msg){
-    const t = $('toast');
-    t.textContent = msg; t.classList.add('show');
-    setTimeout(()=>t.classList.remove('show'), 2000);
-  }
-
-  // ---------------------------
-  // Screens & Buttons
-  // ---------------------------
-  $('playBtn').addEventListener('click', ()=>{
-    initAudio();
-    startFromTitle();
-  });
-  $('howBtn').addEventListener('click', ()=>{ showOverlay('help', true); });
+  // Buttons
+  $('playBtn').addEventListener('click', ()=>{ initAudio(); startFromTitle(); });
+  $('howBtn').addEventListener('click', ()=> showOverlay('help',true));
   $('closeHelp').addEventListener('click', closeHelp);
-  $('shopBtnFromTitle').addEventListener('click', ()=>{
-    showOverlay('title', false); showOverlay('shop', true);
-  });
-  $('continueBtn').addEventListener('click', ()=>{
-    if(!inBattle && !gameOver){ startFromTitle(); }
-    showOverlay('shop', false);
-  });
-  $('backToTitleBtn').addEventListener('click', ()=>{
-    showOverlay('shop', false);
-    showOverlay('title', true);
-  });
+  $('shopBtnFromTitle').addEventListener('click', ()=>{ showOverlay('title',false); showOverlay('shop',true); });
+  $('continueBtn').addEventListener('click', ()=>{ if(!inBattle && !gameOver) startFromTitle(); showOverlay('shop',false); });
+  $('backToTitleBtn').addEventListener('click', ()=>{ showOverlay('shop',false); showOverlay('title',true); });
 
   $('resumeBtn').addEventListener('click', togglePause);
-  $('restartBtn').addEventListener('click', ()=>{
-    showOverlay('pause', false);
-    paused=false; resetRound();
-  });
-  $('toTitleBtn').addEventListener('click', ()=>{
-    paused=false; inBattle=false; ships.length=0; bullets.length=0;
-    showOverlay('pause', false);
-    showOverlay('title', true);
-  });
+  $('restartBtn').addEventListener('click', ()=>{ showOverlay('pause',false); paused=false; resetRound(); });
+  $('toTitleBtn').addEventListener('click', ()=>{ paused=false; inBattle=false; ships.length=0; bullets.length=0; showOverlay('pause',false); showOverlay('title',true); });
 
-  $('goShopBtn').addEventListener('click', ()=>{
-    showOverlay('gameover', false);
-    showOverlay('shop', true);
-  });
-  $('playAgainBtn').addEventListener('click', ()=>{
-    showOverlay('gameover', false);
-    nextRound();
-  });
-  $('quitBtn').addEventListener('click', ()=>{
-    showOverlay('gameover', false);
-    showOverlay('title', true);
-  });
+  $('goShopBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); showOverlay('shop',true); });
+  $('playAgainBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); nextRound(); });
+  $('quitBtn').addEventListener('click', ()=>{ showOverlay('gameover',false); showOverlay('title',true); });
 
-  // Title -> options
   document.querySelectorAll('[data-diff]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('[data-diff]').forEach(b=>b.classList.remove('primary','danger'));
-      const v = Number(btn.dataset.diff);
-      Settings.difficulty = v;
-      if(v===0) btn.classList.add('primary');
-      if(v===1) btn.classList.add('primary');
-      if(v===2) btn.classList.add('danger');
-      applyDifficulty();
-      showToast(`Difficulty: ${['Easy','Normal','Hard'][v]}`);
+      const v=Number(btn.dataset.diff); Settings.difficulty=v;
+      if(v===2) btn.classList.add('danger'); else btn.classList.add('primary');
+      applyDifficulty(); showToast(`Difficulty: ${['Easy','Normal','Hard'][v]}`);
     });
   });
-  $('optParticles').addEventListener('change', e=>Settings.particles = e.target.checked);
-  $('optBloom').addEventListener('change', e=>Settings.bloom = e.target.checked);
-  $('optShake').addEventListener('change', e=>Settings.shake = e.target.checked);
-  $('optSfx').addEventListener('change', e=>Settings.sfx = e.target.checked);
-  $('optVol').addEventListener('input', e=>{ masterVol = Number(e.target.value); });
+  $('optParticles').addEventListener('change', e=>Settings.particles=e.target.checked);
+  $('optBloom').addEventListener('change', e=>Settings.bloom=e.target.checked);
+  $('optShake').addEventListener('change', e=>Settings.shake=e.target.checked);
+  $('optSfx').addEventListener('change', e=>Settings.sfx=e.target.checked);
+  $('optVol').addEventListener('input', e=>{ masterVol=Number(e.target.value); });
 
-  // Shop events
+  // Shop
   document.querySelectorAll('.buy').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      const type = btn.dataset.upg;
-      const prices = {dmg:120,hp:120,erg:140,spd:100};
-      const name = {dmg:'Damage Matrix',hp:'Shield Lattice',erg:'Reactor Overdrive',spd:'Thruster Suite'}[type];
-      const cost = prices[type];
-      if(spendCredits(cost)){
-        Player.upgrades[type] = (Player.upgrades[type]||0)+1;
+      const type=btn.dataset.upg, prices={dmg:120,hp:120,erg:140,spd:100};
+      const name={dmg:'Damage Matrix',hp:'Shield Lattice',erg:'Reactor Overdrive',spd:'Thruster Suite'}[type];
+      const cost=prices[type];
+      if(spendCredits(cost)){ Player.upgrades[type]=(Player.upgrades[type]||0)+1;
         showToast(`Purchased ${name} (+${ type==='dmg'?'10% dmg': type==='hp'?'12% HP': type==='erg'?'15% regen':'10% speed'})`);
-        updateLoadoutText();
-        beep(1060,0.08,0.06);
-      }else{
-        showToast('Not enough credits');
-        beep(220,0.06,0.05);
-      }
+        updateLoadoutText(); beep(1060,0.08,0.06);
+      }else{ showToast('Not enough credits'); beep(220,0.06,0.05); }
     });
   });
   function updateLoadoutText(){
     const u=Player.upgrades;
-    const tags=[
-      u.dmg?`⚔ x${(1+u.dmg*0.10).toFixed(2)} dmg`:'',
-      u.hp?`🛡 x${(1+u.hp*0.12).toFixed(2)} HP`:'',
-      u.erg?`⚡ x${(1+u.erg*0.15).toFixed(2)} regen`:'',
-      u.spd?`🛞 x${(1+u.spd*0.10).toFixed(2)} speed`:'',
-    ].filter(Boolean);
+    const tags=[ u.dmg?`⚔ x${(1+u.dmg*0.10).toFixed(2)} dmg`:'' , u.hp?`🛡 x${(1+u.hp*0.12).toFixed(2)} HP`:'' , u.erg?`⚡ x${(1+u.erg*0.15).toFixed(2)} regen`:'' , u.spd?`🛞 x${(1+u.spd*0.10).toFixed(2)} speed`:'' ].filter(Boolean);
     $('loadoutText').textContent = tags.length? `Modifiers: ${tags.join(' · ')}` : 'Base modifiers: none.';
   }
   updateLoadoutText();
 
   // Screenshot
   $('btnScreenshot').addEventListener('click', ()=>{
-    try{
-      const a = document.createElement('a');
-      a.download = `void-clash-${Date.now()}.png`;
-      a.href = cv.toDataURL('image/png');
-      a.click();
-      showToast('Screenshot saved');
-    }catch(e){ showToast('Screenshot failed'); }
+    try{ const a=document.createElement('a'); a.download=`void-clash-${Date.now()}.png`; a.href=cv.toDataURL('image/png'); a.click(); showToast('Screenshot saved'); }
+    catch(e){ showToast('Screenshot failed'); }
   });
   $('btnHelp').addEventListener('click', openHelp);
 
-  // ---------------------------
   // Game Loop
-  // ---------------------------
-  let last = now();
+  let last=now();
   function frame(){
-    const t = now();
-    let dt = (t-last)/1000; if(dt>0.1) dt=0.1; last = t;
-
-    // physics / update
+    const t=now(); let dt=(t-last)/1000; if(dt>0.1) dt=0.1; last=t;
     ctx.clearRect(0,0,cv.width,cv.height);
-    drawBackground(dt);
-    applyCamera();
+    drawBackground(dt); applyCamera();
 
-    // regen energy
     if(inBattle && !paused){
-      Player.energy = Math.min(Player.energyMax, Player.energy + energyRegenFactor()*dt);
-      setEnergyHUD();
-      aiTick(dt);
-      shipUpdate(dt);
-      bulletsUpdate(dt);
-      particleUpdate(dt);
-
-      // victory check
+      Player.energy=Math.min(Player.energyMax, Player.energy+energyRegenFactor()*dt); setEnergyHUD();
+      aiTick(dt); shipUpdate(dt); bulletsUpdate(dt); particleUpdate(dt);
       if(Enemy.hp<=0) endBattle(true);
       if(Player.hp<=0) endBattle(false);
-    }else{
-      particleUpdate(dt);
-    }
+    }else{ particleUpdate(dt); }
 
-    // draw world
-    // firing line
-    ctx.strokeStyle='rgba(255,255,255,.06)';
-    ctx.beginPath(); ctx.moveTo(0, cv.height/2); ctx.lineTo(cv.width, cv.height/2); ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.moveTo(0, cv.height/2); ctx.lineTo(cv.width, cv.height/2); ctx.stroke();
 
     drawFlagship(Flagship.p, Player.hp/Player.hpMax, "#00faff");
-    drawFlagship(Flagship.e, Enemy.hp/Enemy.hpMax, "#ff6b9f");
+    drawFlagship(Flagship.e, Enemy.hp/Enemy.hpMax, "#ff4d7a");
+    shipDraw(); bulletsDraw(); particleDraw();
 
-    shipDraw();
-    bulletsDraw();
-    particleDraw();
-
-    resetCamera();
-    requestAnimationFrame(frame);
+    resetCamera(); requestAnimationFrame(frame);
   }
   frame();
 
-  // ---------------------------
-  // Late HUD updates per second
-  // ---------------------------
-  setInterval(()=>{
-    setHPHUD();
-  }, 150);
+  setInterval(()=>{ setHPHUD(); },150);
+  window.addEventListener('resize', updateHUD);
 
-  // ---------------------------
-  // Resize correction
-  // ---------------------------
-  window.addEventListener('resize', ()=>{
-    updateHUD();
-  });
-
-  // ---------------------------
-  // Initial screen
-  // ---------------------------
-  showOverlay('title', true);
-  updateHUD();
+  // Initial
+  showOverlay('title',true); updateHUD();
 
 })(); // IIFE end
-
-
-
-
 </script>
-<div id="controls">
-  <button onclick="deployShip(1)">Triangle</button>
-  <button onclick="deployShip(2)">Square</button>
-  <button onclick="deployShip(3)">Pentagon</button>
-  <button onclick="deployShip(4)">Hexagon</button>
-  <button onclick="deployShip(5)">Octagon</button>
-</div>
-
 </body>
 </html>
-
-
-
-
