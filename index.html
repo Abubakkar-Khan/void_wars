@@ -117,13 +117,26 @@
       <div class="title">Upgrades (credits: <span id="shopCredits" class="money">0</span>)</div>
       <div class="row">
         <button id="toMenuFromShop" class="btn danger">⎋ Go to Menu</button>
-
       </div>
     </div>
+
     <div class="shop-grid" id="shopList"></div>
+
+    <!-- NEW footer row -->
+    <div class="row" style="margin-top:8px; justify-content:flex-end; gap:8px">
+      <button id="shopNextBtn" class="btn primary">▶ Next Battle</button>
+    </div>
+
+        <!-- NEW footer row -->
+    <div class="row" style="margin-top:8px; justify-content:flex-end; gap:8px">
+      <button id="shopNextBtn" class="btn primary">▶ Next Battle</button>
+    </div>
+
+
     <div class="badge" style="margin-top:8px">Prices increase: base × 1.25^level. Effects apply immediately.</div>
   </div>
 </div>
+
 
 <!-- Pause -->
 <div id="pause" class="overlay">
@@ -142,17 +155,15 @@
 <!-- Game Over -->
 <div id="gameover" class="overlay">
   <div class="modal">
-    <div class="title" id="resultTitle">Battle Complete</div>
-    <div class="list" style="margin:8px 0">
-      <div id="statsText" class="badge">Stats…</div>
-    </div>
-    <div class="row">
-      <button id="spendBtn" class="btn primary">⛭ Spend Credits</button>
-      <button id="nextBtn" class="btn">▶ Next Round</button>
-      <button id="quitBtn" class="btn danger">⎋ Quit to Title</button>
+    <div id="resultTitle" class="title">Victory</div>
+    <div id="statsText" style="margin:6px 0 14px 0;text-align:center">...</div>
+    <div class="row" style="justify-content:space-around; gap:8px">
+      <button id="spendBtn" class="btn">Spend Credits</button>
+      <button id="menuBtn" class="btn danger">Menu</button>
     </div>
   </div>
 </div>
+
 
 <div class="corner">
   <button id="speedBtn" class="btn small">⏩ Speed</button>
@@ -207,6 +218,8 @@
   };
   let Round=1, roundTime=0, nextBossIn=0, bossActive=false;
   let paused=false, playing=false, gameOver=false;
+  let LastOutcome = null; // 'win' | 'loss' | null
+
 
   // ---------- HUD ----------
   const $ = id=>document.getElementById(id);
@@ -276,9 +289,9 @@
   const BASE = {
     Fighter:{hp:56, dmg:6, spd:120.9, turn:3.2, cost:2,  range:0, mass:2.0,  r:11},
     Interceptor:{hp:62, dmg:8, spd:200.1, turn:2.6, cost:3,  range:140, mass:1.2, r:12},
-    Bomber:{hp:140,dmg:30,spd:100.3, turn:1.8, cost:4,  range:80,  mass:2.2, r:14, boom:90, boomD:40},
+    Bomber:{hp:240,dmg:30,spd:100.3, turn:1.8, cost:4,  range:80,  mass:2.2, r:14, boom:100, boomD:40},
     Drone:{hp:70, dmg:5, spd:100.6, turn:2.2, cost:3,  range:110, mass:1.1, r:12, heal:12},
-    Frigate:{hp:90, dmg:16,spd:100.6, turn:2.0, cost:5,  range:220, mass:1.6, r:13, proj:5},
+    Frigate:{hp:90, dmg:16,spd:100.6, turn:2.0, cost:5,  range:260, mass:1.6, r:13, proj:5},
   };
   const ORDER = ['Fighter','Interceptor','Bomber','Drone','Frigate'];
   // --- Collision tuning ---
@@ -836,7 +849,39 @@
 
   // ---------- Buttons & Keys ----------
   $('startBtn').addEventListener('click', ()=>{ initAudio(); start(); });
-  $('openShopFromTitle').addEventListener('click', ()=>{ buildShop(); show('shop',true); });
+  $('openShopFromTitle').addEventListener('click', ()=>{
+    buildShop();
+    show('shop',true);
+    const b = $('shopNextBtn');
+    if (b) b.textContent = (LastOutcome === 'loss') ? '↺ Retry' : '▶ Next Battle';
+  });
+
+  $('shopNextBtn').addEventListener('click', ()=>{
+  // Decide: retry same round on loss, advance on win/neutral
+  const retry = (LastOutcome === 'loss');
+
+  show('shop', false);
+  show('gameover', false);
+  show('title', false);  // stay in-game
+
+  if (retry) {
+    // Retry current round
+    roundTime = 0;
+    nextBossIn = (Round % 5 === 0 ? 3 : 0);
+    resetBattle();
+    playing = true;
+    toast('↺ Retry!');
+  } else {
+    // Next round
+    Round++;
+    roundTime = 0;
+    nextBossIn = (Round % 5 === 0 ? 3 : 0);
+    resetBattle();
+    playing = true;
+    toast(`▶ Round ${Round}`);
+  }
+});
+
   $('toMenuFromShop').addEventListener('click', ()=>{
     // leave shop and go to title safely
     show('shop', false);
@@ -852,7 +897,14 @@
   $('resumeBtn').addEventListener('click', ()=> show('pause',false));
   $('restartBtn').addEventListener('click', ()=>{ show('pause',false); resetBattle(); playing=true; });
   $('toTitleBtn').addEventListener('click', ()=>{ show('pause',false); show('title',true); playing=false; });
-  $('spendBtn').addEventListener('click', ()=>{ show('gameover',false); buildShop(); show('shop',true); });
+  $('spendBtn').addEventListener('click', ()=>{
+    show('gameover',false);
+    buildShop();
+    show('shop',true);
+    const b = $('shopNextBtn');
+    if (b) b.textContent = (LastOutcome === 'loss') ? '↺ Retry' : '▶ Next Battle';
+  });
+
   $('nextBtn').addEventListener('click', ()=>{
     show('gameover',false);
     const mode = $('nextBtn').dataset.mode || 'next';
@@ -998,14 +1050,10 @@
     $('resultTitle').textContent = v? 'Victory' : 'Defeat';
     $('statsText').textContent = `Round ${Round} — Damage Dealt: ${dealt} · Taken: ${taken} · Reward: +${reward}c`;
 
-    const nextBtn = $('nextBtn');
-    if(v){
-      nextBtn.textContent = '▶ Next Round';
-      nextBtn.dataset.mode = 'next';
-    }else{
-      nextBtn.textContent = '↺ Retry';
-      nextBtn.dataset.mode = 'retry';
-    }
+     // NEW: remember last result
+    LastOutcome = v ? 'win' : 'loss';
+
+    
     show('gameover',true);
   }
 
