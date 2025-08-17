@@ -339,7 +339,7 @@
   // ---------- Spawning ----------
   const Selected={type:'Fighter'};
   const typeCooldown = {Fighter:0, Interceptor:0, Bomber:0, Drone:0, Frigate:0};
-  const typeCDLen = {Fighter:0.6, Interceptor:0.7, Bomber:1.4, Drone:1.0, Frigate:1.2};
+  const typeCDLen = {Fighter:0.2, Interceptor:0.5, Bomber:1.0, Drone:1.0, Frigate:1.2};
   let concurrentLimit=1;
   function canAfford(type){ return Player.energy >= BASE[type].cost; }
 
