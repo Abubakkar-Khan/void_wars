@@ -116,12 +116,11 @@
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
       <div class="title">Upgrades (credits: <span id="shopCredits" class="money">0</span>)</div>
       <div class="row">
-        <button id="closeShop" class="btn">Close</button>
+        <button id="toMenuFromShop" class="btn danger">⎋ Go to Menu</button>
+
       </div>
     </div>
-    <div class="shop-grid" id="shopList">
-      <!-- items injected -->
-    </div>
+    <div class="shop-grid" id="shopList"></div>
     <div class="badge" style="margin-top:8px">Prices increase: base × 1.25^level. Effects apply immediately.</div>
   </div>
 </div>
@@ -159,6 +158,7 @@
   <button id="speedBtn" class="btn small">⏩ Speed</button>
   <button id="helpBtn" class="btn small">❔ Help</button>
   <button id="shotBtn" class="btn small">📸</button>
+  <button id="maxBtn" class="btn small">⨉ Max Deploy: Off</button>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -195,7 +195,7 @@
   const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
   const Speed = { mult:1, steps:[1,1.5,2] };
   const Player = {
-    hpMax:1100, hp:1100, energy:0, energyMax:10, energyRegen:1.25, credits:0,
+    hpMax:1100, hp:1100, energy:0, energyMax:10, energyRegen:2.0, credits:0, // faster default regen
     upgrades:{
       dmg:0, hp:0, erg:0, cap:0, spd:0, armor:0, ram:0, projspd:0, range:0, squad:0, droneR:0, droneT:0, pd:0, aura:0, bossB:0, salvage:0
     }
@@ -203,7 +203,7 @@
   const Enemy = {
     hpMax:1100, hp:1100, energy:0, energyMax:10, energyRegen:1.15,
     difficultyBias:1.0,
-    specialUsed:false, personality:'balanced' // 'rusher'|'harasser' etc
+    specialUsed:false, personality:'balanced'
   };
   let Round=1, roundTime=0, nextBossIn=0, bossActive=false;
   let paused=false, playing=false, gameOver=false;
@@ -274,15 +274,29 @@
   const TYPE_ACCENT={ Fighter:"#70d7ff", Interceptor:"#6a8bff", Bomber:"#8be0ff", Drone:"#50ffa8", Frigate:"#ffd36b" };
 
   const BASE = {
-    Fighter:{hp:46, dmg:10, spd:100.9, turn:3.0, cost:2,  range:0,   mass:1,  r:11},
+    Fighter:{hp:56, dmg:6, spd:120.9, turn:3.2, cost:2,  range:0, mass:2.0,  r:11},
     Interceptor:{hp:62, dmg:8, spd:200.1, turn:2.6, cost:3,  range:140, mass:1.2, r:12},
     Bomber:{hp:140,dmg:30,spd:100.3, turn:1.8, cost:4,  range:80,  mass:2.2, r:14, boom:90, boomD:40},
     Drone:{hp:70, dmg:5, spd:100.6, turn:2.2, cost:3,  range:110, mass:1.1, r:12, heal:12},
     Frigate:{hp:90, dmg:16,spd:100.6, turn:2.0, cost:5,  range:220, mass:1.6, r:13, proj:5},
   };
   const ORDER = ['Fighter','Interceptor','Bomber','Drone','Frigate'];
+  // --- Collision tuning ---
+  const MIN_REL_HIT = 0.6;         // ignore super-soft bumps
+  const MAX_COLL_DMG = 14;         // hard cap per collision tick
+  const COLLISION_SCALE = {        // type-specific incoming-collision scaling
+    Fighter: 0.25,
+    Interceptor: 0.45,
+    Bomber: 0.70,
+    Drone: 0.40,
+    Frigate: 0.65
+  };
 
-  const ships=[], shots=[], heals=[]; // heals: {x1,y1,x2,y2,t}
+  const FIGHTER_MELEE_DPS_MULT = 0.5;   // ~ (1.2 hit) / (0.22s) ≈ 5.45× dmg/sec
+  const FIGHTER_MELEE_PAD = 2;
+  
+  
+  const ships=[], shots=[], heals=[];
   let boss=null;
 
   // Flagships (collidable)
@@ -316,9 +330,8 @@
   function upgCost(key){ const base = UPG.find(u=>u.key===key).base; const lvl=Player.upgrades[key]||0; return Math.floor(base*Math.pow(1.25,lvl)); }
 
   function applyStats(){
-    // recompute derived stats
     Player.energyMax = 10 + (Player.upgrades.cap||0)*2;
-    Player.energyRegen = 1.25*(1+(Player.upgrades.erg||0)*0.15);
+    Player.energyRegen = 2.0*(1+(Player.upgrades.erg||0)*0.15); // faster base (2.0)
     Player.hpMax = Math.floor(1100*(1+(Player.upgrades.hp||0)*0.12));
     Player.hp = clamp(Player.hp,0,Player.hpMax);
   }
@@ -329,16 +342,44 @@
   const typeCDLen = {Fighter:0.6, Interceptor:0.7, Bomber:1.4, Drone:1.0, Frigate:1.2};
   let concurrentLimit=1;
   function canAfford(type){ return Player.energy >= BASE[type].cost; }
+
+  // Max deploy mode
+  const Modes = { maxDeploy:false };
+
   function tryDeploy(type, team=TEAM.ALLY){
     if(!playing || paused) return false;
-    if(team===TEAM.ALLY && typeCooldown[type]>0) return false;
-    const cost=BASE[type].cost;
-    if(team===TEAM.ALLY && !canAfford(type)) return false;
-    const activeAllies = ships.filter(s=>s.team===TEAM.ALLY).length;
-    concurrentLimit = 1 + (Player.upgrades.squad||0);
-    if(team===TEAM.ALLY && activeAllies>=10+concurrentLimit*4) return false;
 
-    if(team===TEAM.ALLY){ Player.energy-=cost; setEnergyHUD(); typeCooldown[type]=typeCDLen[type]; }
+    // cooldown gate for single spawn; allow batch to bypass initial gate
+    if(team===TEAM.ALLY && typeCooldown[type]>0 && !Modes.maxDeploy) return false;
+
+    const cost=BASE[type].cost;
+    const capBase = 10; // base field cap
+    concurrentLimit = 1 + (Player.upgrades.squad||0);
+    const cap = capBase + concurrentLimit*4;
+
+    const countAllies = () => ships.filter(s=>s.team===TEAM.ALLY).length;
+
+    if(team===TEAM.ALLY && !canAfford(type)) return false;
+    if(team===TEAM.ALLY && countAllies()>=cap) return false;
+
+    // Batch deploy in max mode
+    if(team===TEAM.ALLY && Modes.maxDeploy){
+      let spawned=0;
+      while(Player.energy>=cost && countAllies()<cap){
+        Player.energy-=cost;
+        spawnShip(type,team);
+        spawned++;
+        if(spawned>50) break; // safety
+      }
+      setEnergyHUD();
+      typeCooldown[type]=typeCDLen[type]; // standard cooldown after burst
+      return spawned>0;
+    }
+
+    // Single spawn
+    if(team===TEAM.ALLY){
+      Player.energy-=cost; setEnergyHUD(); typeCooldown[type]=typeCDLen[type];
+    }
     spawnShip(type,team);
     return true;
   }
@@ -351,7 +392,7 @@
       type, team,
       x: team===TEAM.ALLY ? Flag.ally.x+50 : Flag.enemy.x-50,
       y: team===TEAM.ALLY ? Flag.ally.y+rand(-120,120) : Flag.enemy.y+rand(-120,120),
-      vx:0, vy:0, ang:0, // orientation
+      vx:0, vy:0, ang:0,
       hp:Math.floor(b.hp * (1+(Player.upgrades.hp||0)*0.12) * aura),
       hpMax:0, r:b.r, mass:b.mass,
       target:null, cd:0, ranged:b.range>0,
@@ -360,7 +401,11 @@
       dmg:Math.floor(b.dmg * (1+(Player.upgrades.dmg||0)*0.10) * aura),
       healPS: b.heal ? b.heal*(1+(Player.upgrades.droneT||0)*0.20) : 0,
       boom: b.boom||0, boomD:b.boomD||0, proj:b.proj||0,
+
+      // NEW
+      meleeCD: 0,
     };
+
     s.hpMax=s.hp;
     ships.push(s);
     spark(s.x,s.y,TEAM_COLOR(team),10,1.2);
@@ -383,52 +428,51 @@
     const tx=clamp(cx,rx,rx+rw), ty=clamp(cy,ry,ry+rh), dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr;
   }
 
-  // ---------- Steering (organic) ----------
+  // ---------- Steering ----------
   function steer(s, dt){
-    // choose target: nearest enemy (ship or flagship) with priority by TTK
     let tgt=null, best=Infinity;
     for(const o of ships){
       if(o.team!==s.team){
         const d = Math.hypot(o.x-s.x,o.y-s.y);
-        const ttk = (o.hp / Math.max(1,s.dmg)) + d/100; // simple
+        const ttk = (o.hp / Math.max(1,s.dmg)) + d/100;
         if(ttk<best){ best=ttk; tgt=o; }
       }
     }
-    // also consider enemy flagship
     const foeF = (s.team===TEAM.ALLY? Flag.enemy : Flag.ally);
     const dxF = foeF.x - s.x, dyF = foeF.y - s.y, dF = Math.hypot(dxF,dyF);
     if(!tgt || dF<best*0.9) tgt = foeF;
 
-    // desired velocity
     let desireX=0, desireY=0;
 
     // SEEK / ARRIVE
     if(tgt){
       const tx = ('w' in tgt) ? tgt.x : tgt.x, ty = ('w' in tgt) ? tgt.y : tgt.y;
       let dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx,dy)||1;
-      const arrive = 80;
+      const arrive = (s.type === 'Fighter' ? 24 : 80);
       const m = (d<arrive)? lerp(0, s.maxSpd, d/arrive) : s.maxSpd;
       desireX += (dx/d) * m; desireY += (dy/d) * m;
     }
 
-    // KITE behavior for frigates: stay near max range
+    // KITE for frigates
     if(s.type==='Frigate' && tgt && !('w' in tgt)){
       const dx = tgt.x - s.x, dy = tgt.y - s.y, d=Math.hypot(dx,dy)||1;
       if(d < s.range*0.75){ desireX -= (dx/d)*s.maxSpd*.8; desireY -= (dy/d)*s.maxSpd*.8; }
     }
 
-    // SEPARATION & AVOID
+    // SEPARATION
+    // SEPARATION (only from allies so we can stick to enemies)
     let sepX=0, sepY=0, count=0;
     for(const o of ships){
-      if(o===s) continue;
+      if(o===s || o.team!==s.team) continue; // <— only allies
       const dx=o.x-s.x, dy=o.y-s.y, d=Math.hypot(dx,dy)||1;
-      if(d<28){ sepX -= dx/d; sepY -= dy/d; count++; }
+      if(d<26){ sepX -= dx/d; sepY -= dy/d; count++; } // a bit tighter than 28
     }
-    if(count>0){ const k=1.4*s.maxSpd; desireX += (sepX/count)*k; desireY += (sepY/count)*k; }
+    if(count>0){ const k=1.2*s.maxSpd; desireX += (sepX/count)*k; desireY += (sepY/count)*k; }
 
-    // AVOID FLAGSHIPS (unless committing to ram)
+
+    // AVOID FLAGSHIPS (unless ramming)
     const foe = (s.team===TEAM.ALLY? Flag.enemy : Flag.ally);
-    if(!('w' in tgt)){ // not ramming
+    if(!('w' in tgt)){
       const rx=foe.x-foe.w/2, ry=foe.y-foe.h/2;
       if(rectCircle(rx,ry,foe.w,foe.h,s.x,s.y, s.r+8)){
         const dx = (s.x-foe.x)||1, dy=(s.y-foe.y)||0, d=Math.hypot(dx,dy)||1;
@@ -436,58 +480,83 @@
       }
     }
 
-    // UPDATE velocity with turn/accel caps
+    // UPDATE velocity
     const accX = desireX - s.vx, accY = desireY - s.vy;
-    const accMax = 0.15 * 60; // px/s^2 scaled to per-tick
+    const accMax = 0.15 * 60;
     const aLen = Math.hypot(accX,accY)||1;
     const ax = accX/aLen * Math.min(accMax, aLen);
     const ay = accY/aLen * Math.min(accMax, aLen);
     s.vx += ax*dt*60; s.vy += ay*dt*60;
 
-    // clamp speed
     const sp = Math.hypot(s.vx,s.vy);
     const max = s.maxSpd*60;
     if(sp>max){ s.vx = s.vx/sp*max; s.vy=s.vy/sp*max; }
 
-    // mild drift noise
     s.vx += rand(-.02,.02)*60*dt; s.vy += rand(-.02,.02)*60*dt;
 
-    // advance
     s.x += s.vx*dt; s.y += s.vy*dt;
-
-    // keep in field
     s.y = clamp(s.y, 40, cv.height-40);
   }
 
-  // ---------- Damage application ----------
+  // ---------- Damage ----------
   function applyDamage(target, amount, sourceTeam){
     if(amount<=0) return;
+
     const armor= (target.team===TEAM.ALLY? Player.upgrades.armor||0 : 0);
     const scale = target.team===TEAM.ALLY ? (1-armor*0.08) : 1;
     let amt = Math.max(1, Math.floor(amount*scale));
-    // boss buster
-    if(boss && target===boss && (sourceTeam===TEAM.ALLY)){ amt = Math.floor(amt*(1+(Player.upgrades.bossB||0)*0.20)); }
+
+    if(boss && target===boss && (sourceTeam===TEAM.ALLY)){
+      amt = Math.floor(amt*(1+(Player.upgrades.bossB||0)*0.20));
+    }
+
+    // Redirect flagship damage to pools (prevents mirror from overwriting)
+    if(target === Flag.enemy){ Enemy.hp = Math.max(0, Enemy.hp - amt); return; }
+    if(target === Flag.ally){ Player.hp = Math.max(0, Player.hp - amt); return; }
+
     target.hp -= amt;
   }
 
   // ---------- Updates ----------
   function updateShips(dt){
-    // cooldowns & deploy bar cooling
     for(const k in typeCooldown){ typeCooldown[k]=Math.max(0, typeCooldown[k]-dt); updateDeployCD(k); }
-
-    // drones: clear beams each tick
     heals.length=0;
 
-    // steering + attack
     for(let i=ships.length-1;i>=0;i--){
       const s=ships[i];
+        // Safe: works even if s.meleeCD was never defined
+        
+        
       steer(s,dt);
+      
+        // --- RELIABLE FIGHTER MELEE DPS ON CONTACT ---
+      if (s.type === 'Fighter') {
+        // Find any *one* enemy touching us (closest first)
+        let victim = null, best = Infinity;
+        for (const o of ships) {
+          if (o.team === s.team) continue;
+          const d = Math.hypot(o.x - s.x, o.y - s.y);
+          const FIGHTER_MELEE_RANGE = 26; // damage when within ~26px, not just overlap
+          if (d < Math.max(FIGHTER_MELEE_RANGE, s.r + o.r + FIGHTER_MELEE_PAD) && d < best) {
+            best = d; victim = o;
+          }
+        }
+        if (victim) {
+          // Apply continuous DPS so sliding/side-jitter still deals damage
+          const dps = s.dmg * FIGHTER_MELEE_DPS_MULT; // scales with upgrades (uses s.dmg)
+          applyDamage(victim, dps * dt, s.team);
+          // (optional) tiny spark for feedback
+          if (Math.random() < 0.12) spark((s.x+victim.x)/2, (s.y+victim.y)/2, '#fff', 4, 0.8);
+        }
+      }
+
+
+      s.meleeCD = Math.max(0, (s.meleeCD || 0) - dt);
 
       // firing / melee
       s.cd -= dt;
-      if(s.type==='Fighter'){ /* melee only, handled in collisions */ }
+      if(s.type==='Fighter'){ /* melee via collisions */ }
       else if(s.ranged){
-        // find nearest enemy in range
         let tgt=null, best=Infinity;
         for(const o of ships){ if(o.team!==s.team){
           const d = Math.hypot(o.x-s.x,o.y-s.y); if(d<best){best=d; tgt=o;}
@@ -504,30 +573,24 @@
           fire(s, s.x+dx, s.y+dy, s.type==='Frigate'? 6.2 : 5.0);
         }
       } else if(s.type==='Drone'){
-        // heal beam to lowest-HP ally in range (line is purely visual)
         let best=null, br=Infinity;
         const r = (BASE.Drone.range*(1+(Player.upgrades.droneR||0)*0.15));
         for(const o of ships){ if(o.team===s.team && o!==s && o.hp<o.hpMax){
           const d=Math.hypot(o.x-s.x,o.y-s.y); if(d<r && o.hp/o.hpMax < br){ br=o.hp/o.hpMax; best=o; }
         }}
         if(best){
-          // LoS light: ignore obstacles for simplicity
           heals.push({x1:s.x,y1:s.y,x2:best.x,y2:best.y,t:0});
           best.hp = Math.min(best.hpMax, best.hp + s.healPS*dt);
-          // small VFX at patient
           if(Math.random()<.2) spark(best.x,best.y,'#aef',2,.3);
         }
       }
 
-      // death
       if(s.hp<=0){
-        // bomber explosion
         if(s.boom){
           ringBlast(s.x,s.y,TEAM_COLOR(s.team), 10);
           for(const o of ships){ if(o.team!==s.team && Math.hypot(o.x-s.x,o.y-s.y) < s.boom){ applyDamage(o, s.boomD, s.team); } }
           addShake(8);
         }
-        // salvage bonus
         if(s.team===TEAM.ENEMY && (Player.upgrades.salvage||0)>0){
           Player.credits += 4*(Player.upgrades.salvage||0); setMoneyHUD();
         }
@@ -541,35 +604,73 @@
     // ship<->ship circles
     for(let i=0;i<ships.length;i++){
       const a=ships[i];
-      // with other ships
       for(let j=i+1;j<ships.length;j++){
-        const b=ships[j]; const dx=b.x-a.x, dy=b.y-a.y; const dist=Math.hypot(dx,dy);
+        const b=ships[j];
+        const dx=b.x-a.x, dy=b.y-a.y; 
+        const dist=Math.hypot(dx,dy);
         const min = a.r + b.r;
+
         if(dist<min){
           const nx = dx/(dist||1), ny = dy/(dist||1);
           const overlap = (min - dist);
+
           // separate
           a.x -= nx*overlap*.5; a.y -= ny*overlap*.5;
           b.x += nx*overlap*.5; b.y += ny*overlap*.5;
-          // impact damage (mass & closing speed)
+
+          // physics impact calc
           const rel = Math.abs((b.vx-a.vx)*nx + (b.vy-a.vy)*ny);
-          const base = 0.25 * (a.mass + b.mass) * rel * (Player.upgrades.ram?1+Player.upgrades.ram*0.25:1);
-          if(a.team!==b.team){
-            if(a.type==='Fighter' || b.type!=='Fighter') applyDamage(b, base, a.team);
-            if(b.type==='Fighter' || a.type!=='Fighter') applyDamage(a, base, b.team);
-            if(base>6){ addShake(2); if(Math.random()<.1) spark((a.x+b.x)/2,(a.y+b.y)/2,'#fff',6,1.2); }
-          }
+          const base = 0.05 * (a.mass + b.mass) * rel * (Player.upgrades.ram ? 1 + Player.upgrades.ram*0.25 : 1);
+
+          if (a.team !== b.team) {
+  // -------- MASS-WEIGHTED PUSH + LOW CHIP DAMAGE --------
+  // rel = relative speed along the collision normal (already computed above)
+
+  // Tuning knobs (all local; tweak here if needed)
+  const RESTITUTION    = 0.20;   // 0 = sticky, 1 = super bouncy
+  const PUSH_GAIN      = 20.0;   // overall push strength
+  const PUSH_CAP       = 60.0;   // cap the push so it doesn't explode apart
+  const DMG_PER_IMPULSE= 0.08;   // convert push impulse to damage (low = chip)
+  const DMG_CAP        = 10.0;   // max damage per collision tick
+
+  // Effective mass for a 1D collision impulse (heavier ships impart/absorb more)
+  const mA = Math.max(0.1, a.mass), mB = Math.max(0.1, b.mass);
+  const mEff = (mA * mB) / (mA + mB);
+
+  // Base impulse along the normal (mass-weighted), includes a touch of restitution
+  let J = (rel * (1 + RESTITUTION)) * mEff * PUSH_GAIN * (Player.upgrades.ram ? (1 + Player.upgrades.ram*0.25) : 1);
+  J = Math.min(J, PUSH_CAP);
+
+  // Apply equal & opposite impulses; heavy ships move less for the same impulse
+  a.vx -= nx * (J / mA); a.vy -= ny * (J / mA);
+  b.vx += nx * (J / mB); b.vy += ny * (J / mB);
+
+  // Low chip damage based on impulse; scale by *opponent* mass so heavier hitters hurt more
+  const dmgToB = Math.min(DMG_CAP, J * DMG_PER_IMPULSE * (mA / 1.5));
+  const dmgToA = Math.min(DMG_CAP, J * DMG_PER_IMPULSE * (mB / 1.5));
+
+  if (dmgToB > 0.25) applyDamage(b, dmgToB, a.team);
+  if (dmgToA > 0.25) applyDamage(a, dmgToA, b.team);
+
+  // (Keep your Fighter melee/DPS-on-contact code right after this if you have it)
+}
+
+
         }
       }
-      // with flagships (rect)
+
+      // ship with enemy flagship
       const foeF = (a.team===TEAM.ALLY? Flag.enemy : Flag.ally);
       const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
       if(rectCircle(rx,ry,foeF.w,foeF.h,a.x,a.y,a.r)){
-        // simple bounce + damage
         const dir = Math.sign(a.x-foeF.x)||1;
         a.vx += dir*60*dt; a.x += dir*14;
-        applyDamage((a.team===TEAM.ALLY? foeF : foeF), a.mass*8, a.team);
-        applyDamage(a, a.mass*10, foeF.team);
+
+        // toned-down flagship collision so Fighters don't evaporate on graze
+        const vsFlagScale = (a.type==='Fighter' ? 0.35 : 0.8);
+        applyDamage(foeF, a.mass*8 * vsFlagScale, a.team);
+        applyDamage(a,    a.mass*9 * vsFlagScale, foeF.team);
+
         spark(a.x,a.y,TEAM_COLOR(a.team),8,1.2); addShake(4);
       }
     }
@@ -582,16 +683,18 @@
       // ship hit
       let hit=false;
       for(const s of ships){ if(s.team!==b.team){
-        if(Math.hypot(s.x-b.x,s.y-b.y) < s.r+ b.r){
+        if(Math.hypot(s.x-b.x,s.y-b.y) < s.r + b.r){
           applyDamage(s, b.dmg, b.team); hit=true; spark(b.x,b.y,TEAM_COLOR(b.team),6,1.0); break;
         }
       }}
+
       // flagship hit
       if(!hit){
         const foeF = (b.team===TEAM.ALLY? Flag.enemy : Flag.ally);
         const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
         if(rectCircle(rx,ry,foeF.w,foeF.h,b.x,b.y,6)){ hit=true; applyDamage(foeF, Math.floor(b.dmg*1.2), b.team); addShake(4); }
       }
+
       if(hit){ shots.splice(i,1); }
       else if(b.x<-40||b.x>cv.width+40||b.y<-40||b.y>cv.height+40){ shots.splice(i,1); }
     }
@@ -606,18 +709,14 @@
   }
   function updateBoss(dt){
     if(!boss) return;
-    boss.x += boss.vx*dt; // advance
+    boss.x += boss.vx*dt;
     boss.cd -= dt;
-    // phase pulses
     if(boss.cd<=0){
       boss.cd = 6;
-      // pulse: damage + pushback
       for(const s of ships){ if(s.team===TEAM.ALLY && Math.abs(s.x-boss.x)<280){ applyDamage(s,18, TEAM.ENEMY); s.vx -= 50; } }
       addShake(6); ringBlast(boss.x,boss.y,'#ff9ab3',12);
-      // spawn adds
       for(let i=0;i<2;i++) spawnShip(Math.random()<.5?'Interceptor':'Frigate', TEAM.ENEMY);
     }
-    // reach player
     if(boss.x - boss.w/2 < Flag.ally.x + Flag.ally.w/2){ Player.hp=0; }
   }
   function drawBoss(){
@@ -626,7 +725,6 @@
     if(Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle='rgba(255,77,122,.25)'; ctx.fillRect(rx-8,ry-8,boss.w+16,boss.h+16); ctx.globalAlpha=1; }
     ctx.strokeStyle='#ff4d7a'; ctx.lineWidth=3*DPR;
     ctx.strokeRect(rx,ry,boss.w,boss.h);
-    // hp bar
     ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(rx-10,ry-10,boss.w+20,6);
     ctx.fillStyle='#ff4d7a'; ctx.fillRect(rx-10,ry-10,(boss.w+20)*(boss.hp/boss.hpMax),6);
   }
@@ -636,7 +734,6 @@
     const rx=fs.x-fs.w/2, ry=fs.y-fs.h/2;
     if(Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle=color; ctx.fillRect(rx-10,ry-10,fs.w+20,fs.h+20); ctx.globalAlpha=1; }
     ctx.strokeStyle=color; ctx.lineWidth=3*DPR;
-    // horizontal wedge hull
     ctx.beginPath();
     if(fs===Flag.ally){
       ctx.moveTo(rx,ry); ctx.lineTo(rx+fs.w,ry+fs.h*.18); ctx.lineTo(rx+fs.w,ry+fs.h*.82); ctx.lineTo(rx,ry+fs.h); ctx.closePath();
@@ -644,7 +741,6 @@
       ctx.moveTo(rx+fs.w,ry); ctx.lineTo(rx,ry+fs.h*.18); ctx.lineTo(rx,ry+fs.h*.82); ctx.lineTo(rx+fs.w,ry+fs.h); ctx.closePath();
     }
     ctx.stroke();
-    // vertical hp bar
     const r = (fs.hp/fs.hpMax);
     ctx.fillStyle='rgba(255,255,255,.06)';
     const bx = fs===Flag.ally ? rx-8 : rx+fs.w+2;
@@ -669,22 +765,19 @@
       AI.timer = rand(.7,1.1) * (Settings.difficulty===2?0.85:1);
       const comp = estimatePlayerComp();
       const opts = [];
-      // counters & waves
       if(comp.Bomber+comp.Frigate>2) opts.push('Interceptor','Interceptor');
       if(comp.Drone>0) opts.push('Fighter');
       if(Enemy.personality==='rusher') opts.push('Fighter','Fighter','Bomber');
       if(Enemy.personality==='harasser') opts.push('Frigate','Interceptor');
-      opts.push('Drone'); // sometimes
+      opts.push('Drone');
       opts.push('Frigate','Interceptor','Fighter','Bomber');
 
-      // choose best affordable
       let choice=null;
       for(let tries=0;tries<6;tries++){
         const t = opts[randi(0,opts.length)];
         const need = BASE[t].cost*Enemy.difficultyBias;
         if(Enemy.energy >= need){ choice=t; break; }
       }
-      // save for bomber sometimes
       if(!choice && Enemy.energy>=BASE.Bomber.cost*1.0) choice='Bomber';
 
       if(choice){
@@ -692,7 +785,6 @@
         spawnShip(choice, TEAM.ENEMY);
       }
 
-      // one-time special: Focus Fire (brief global ROF boost)
       if(!Enemy.specialUsed && Round>=2 && Math.random()<0.2){
         Enemy.specialUsed=true;
         for(const s of ships){ if(s.team===TEAM.ENEMY) s.cd = Math.max(0,s.cd-0.4); }
@@ -745,12 +837,33 @@
   // ---------- Buttons & Keys ----------
   $('startBtn').addEventListener('click', ()=>{ initAudio(); start(); });
   $('openShopFromTitle').addEventListener('click', ()=>{ buildShop(); show('shop',true); });
-  $('closeShop').addEventListener('click', ()=> show('shop',false));
+  $('toMenuFromShop').addEventListener('click', ()=>{
+    // leave shop and go to title safely
+    show('shop', false);
+    show('title', true);
+    // ensure we’re not in an in-between state
+    playing = false;
+    paused = false;
+    gameOver = false;
+    // (optional) reset the battle state so starting again is clean
+    resetBattle();
+  });
+
   $('resumeBtn').addEventListener('click', ()=> show('pause',false));
-  $('restartBtn').addEventListener('click', ()=>{ show('pause',false); resetBattle(); });
+  $('restartBtn').addEventListener('click', ()=>{ show('pause',false); resetBattle(); playing=true; });
   $('toTitleBtn').addEventListener('click', ()=>{ show('pause',false); show('title',true); playing=false; });
   $('spendBtn').addEventListener('click', ()=>{ show('gameover',false); buildShop(); show('shop',true); });
-  $('nextBtn').addEventListener('click', ()=>{ show('gameover',false); Round++; roundTime=0; nextBossIn = (Round%5===0? 3 : 0); resetBattle(); });
+  $('nextBtn').addEventListener('click', ()=>{
+    show('gameover',false);
+    const mode = $('nextBtn').dataset.mode || 'next';
+    if(mode==='retry'){
+      roundTime=0; nextBossIn = (Round%5===0? 3 : 0);
+      resetBattle(); playing=true;
+    }else{
+      Round++; roundTime=0; nextBossIn = (Round%5===0? 3 : 0);
+      resetBattle(); playing=true;
+    }
+  });
   $('quitBtn').addEventListener('click', ()=>{ show('gameover',false); show('title',true); playing=false; });
 
   $('speedBtn').addEventListener('click', ()=>{
@@ -758,9 +871,14 @@
     Speed.mult = Speed.steps[(idx+1)%Speed.steps.length];
     setSpeedHUD(); toast(`Speed ${Speed.mult}×`);
   });
-  $('helpBtn').addEventListener('click', ()=> toast('1–5 pick ship, Space deploy, P pause. Spend credits in Shop.'));
+  $('helpBtn').addEventListener('click', ()=> toast('1–5 pick ship, Space deploy, P pause. Spend credits in Shop. Use “Max Deploy” to burst.'));
   $('shotBtn').addEventListener('click', ()=>{
     try{ const a=document.createElement('a'); a.download=`void-wars-${Date.now()}.png`; a.href=cv.toDataURL('image/png'); a.click(); }catch{}
+  });
+  $('maxBtn').addEventListener('click', (e)=>{
+    Modes.maxDeploy = !Modes.maxDeploy;
+    e.currentTarget.textContent = `⨉ Max Deploy: ${Modes.maxDeploy ? 'On' : 'Off'}`;
+    toast(Modes.maxDeploy ? 'Max deploy enabled' : 'Max deploy disabled');
   });
 
   addEventListener('keydown', e=>{
@@ -805,7 +923,7 @@
     setMoneyHUD();
   }
   function onBuyOnce(e){
-    const btn = e.target.closest('button[data-upg]'); if(!btn) { // reattach if clicked elsewhere
+    const btn = e.target.closest('button[data-upg]'); if(!btn) {
       $('shopList').addEventListener('click', onBuyOnce, {once:true}); return;
     }
     const key = btn.dataset.upg;
@@ -813,7 +931,7 @@
     if(Player.credits>=cost){
       Player.credits -= cost; Player.upgrades[key]=(Player.upgrades[key]||0)+1;
       applyStats(); setMoneyHUD(); toast(`Upgraded ${key} — next ${upgCost(key)}c`);
-      buildShop(); // refresh
+      buildShop();
     }else toast('Not enough credits');
     $('shopList').addEventListener('click', onBuyOnce, {once:true});
   }
@@ -821,11 +939,9 @@
   // ---------- Drawing ----------
   function drawShip(s){
     const stroke=TEAM_COLOR(s.team), accent=TYPE_ACCENT[s.type]||stroke;
-    // bloom halo
     if(Settings.bloom){ ctx.globalAlpha=.22; ctx.fillStyle=(s.team===TEAM.ALLY?'rgba(0,245,255,.25)':'rgba(255,77,122,.25)'); ctx.beginPath(); ctx.arc(s.x,s.y,16,0,TAU); ctx.fill(); ctx.globalAlpha=1; }
     ctx.strokeStyle=stroke; ctx.lineWidth=2*DPR;
 
-    // oriented shape: forward vector
     const ang = Math.atan2(s.vy,s.vx)||0;
     ctx.save(); ctx.translate(s.x,s.y); ctx.rotate(ang);
 
@@ -843,14 +959,12 @@
       ctx.closePath();
     }
     ctx.stroke();
-    // accent lines
     ctx.strokeStyle=accent; ctx.lineWidth=1.5*DPR;
     if(s.type==='Interceptor'){ ctx.beginPath(); ctx.moveTo(-12,-6); ctx.lineTo(-18,-2); ctx.moveTo(-12,6); ctx.lineTo(-18,2); ctx.stroke(); }
     if(s.type==='Bomber'){ ctx.beginPath(); ctx.moveTo(-8,-6); ctx.lineTo(-8,6); ctx.stroke(); }
     if(s.type==='Frigate'){ ctx.beginPath(); ctx.moveTo(8,-6); ctx.lineTo(16,-10); ctx.moveTo(8,6); ctx.lineTo(16,10); ctx.stroke(); }
     ctx.restore();
 
-    // hp bar
     const w=24,h=4;
     ctx.fillStyle='rgba(255,255,255,.08)'; ctx.fillRect(s.x-w/2, s.y-18, w, h);
     ctx.fillStyle=stroke; ctx.fillRect(s.x-w/2, s.y-18, (s.hp/s.hpMax)*w, h);
@@ -883,10 +997,19 @@
     Player.credits += reward; setMoneyHUD();
     $('resultTitle').textContent = v? 'Victory' : 'Defeat';
     $('statsText').textContent = `Round ${Round} — Damage Dealt: ${dealt} · Taken: ${taken} · Reward: +${reward}c`;
+
+    const nextBtn = $('nextBtn');
+    if(v){
+      nextBtn.textContent = '▶ Next Round';
+      nextBtn.dataset.mode = 'next';
+    }else{
+      nextBtn.textContent = '↺ Retry';
+      nextBtn.dataset.mode = 'retry';
+    }
     show('gameover',true);
   }
 
-  // ---------- Main loop (fixed step) ----------
+  // ---------- Main loop ----------
   let last=performance.now(), acc=0, dt=1/60;
   makeDeployBar(); setSpeedHUD();
 
@@ -894,46 +1017,36 @@
     const now=performance.now(), raw=(now-last)/1000; last=now;
     acc += raw * Speed.mult;
 
-    // slow-mo ducking (cheap)
     if(audioCtx) audioCtx.suspend && (Speed.mult<1.01 && !paused ? audioCtx.suspend() : audioCtx.resume());
 
-    // update with fixed step(s)
     while(acc>=dt){
       acc-=dt;
       if(playing && !paused){
         roundTime += dt; setTimeHUD();
-        // regen
         Player.energy = Math.min(Player.energyMax, Player.energy + Player.energyRegen*dt); setEnergyHUD();
         Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + Enemy.energyRegen*dt);
-        // boss timer & spawn
         if(Round%5===0 && !bossActive){
           nextBossIn = Math.max(0, nextBossIn - dt); setBossHUD();
           if(nextBossIn<=0) spawnBoss();
         }
-        // updates
         updateShips(dt);
         collisions(dt);
         aiTick(dt);
         if(bossActive){ updateBoss(dt); if(boss && boss.hp<=0){ boss=null; bossActive=false; toast('Boss defeated!'); } }
-        // flagship hp mirror
+        // Mirror pools to flags (no overwrite of damage thanks to applyDamage redirect)
         Flag.ally.hp = Player.hp; Flag.ally.hpMax=Player.hpMax;
         Flag.enemy.hp = Enemy.hp; Flag.enemy.hpMax=Enemy.hpMax;
 
-        // end checks
         if(Enemy.hp<=0 && (!boss || boss.hp<=0)) victory(true);
         if(Player.hp<=0) victory(false);
       }
-      // particles timestepped
       partsUpdate(dt);
-      // cooldown ticks moved in updateShips
     }
 
-    // draw
     ctx.clearRect(0,0,cv.width,cv.height);
     drawBackground(raw);
     applyCamera();
 
-    // mid divider
     ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.stroke();
 
     drawFlag(Flag.ally, '#00faff');
