@@ -203,13 +203,13 @@
   const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
   const Speed = { mult:1, steps:[1,1.5,2] };
   const Player = {
-    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:3.5, credits:0, // faster default regen
+    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:2.5, credits:0, // faster default regen
     upgrades:{
       dmg:0, hp:0, erg:0, cap:0, spd:0, armor:0, ram:0, projspd:0, range:0, squad:0, droneR:0, droneT:0, pd:0, aura:0, bossB:0, salvage:0
     }
   };
   const Enemy = {
-    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:4.15,
+    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:2.15,
     difficultyBias:1.0,
     specialUsed:false, personality:'balanced'
   };
@@ -361,7 +361,7 @@
   const Selected={type:'Fighter'};
   const typeCooldown = {Fighter:0, Interceptor:0, Bomber:0, Drone:0, Frigate:0};
   const typeCDLen = {Fighter:0.2, Interceptor:0.5, Bomber:1.0, Drone:1.0, Frigate:1.2};
-  for (const k in typeCDLen) typeCDLen[k] /= 3;  // global 3× faster spawns
+  for (const k in typeCDLen) typeCDLen[k] /= 2;  // global 3× faster spawns
 
   let concurrentLimit=1;
   function canAfford(type){ return Player.energy >= BASE[type].cost; }
@@ -613,7 +613,7 @@
         }}
         if(best){
           heals.push({x1:s.x,y1:s.y,x2:best.x,y2:best.y,t:0});
-          best.hp = Math.min(best.hpMax, best.hp + s.healPS*2.5*dt); // 1.5× stronger
+          best.hp = Math.min(best.hpMax, best.hp + s.healPS*1.5*dt); // 1.5× stronger
           if(Math.random()<.2) spark(best.x,best.y,'#aef',2,.3);
         }
       }
@@ -663,8 +663,8 @@
   const RESTITUTION    = 0.20;   // 0 = sticky, 1 = super bouncy
   const PUSH_GAIN      = 20.0;   // overall push strength
   const PUSH_CAP       = 60.0;   // cap the push so it doesn't explode apart
-  const DMG_PER_IMPULSE= 0.08;   // convert push impulse to damage (low = chip)
-  const DMG_CAP        = 10.0;   // max damage per collision tick
+  const DMG_PER_IMPULSE= 0.11;   // convert push impulse to damage (low = chip)
+  const DMG_CAP        = 12.0;   // max damage per collision tick
 
   // Effective mass for a 1D collision impulse (heavier ships impart/absorb more)
   const mA = Math.max(0.1, a.mass), mB = Math.max(0.1, b.mass);
@@ -1082,198 +1082,310 @@ addShake(10);
   // ---------- AI ----------
 // ---------- AI (Min–Max spawn planner) ----------
 
-function pickPersonality(){
-  // simple rotation; you can keep your old logic if you prefer
-  Enemy.personality = ['rusher','balanced','harasser'][ Round % 3 ];
-}
+// ---------- AI (Foresight Minimax v2) ----------
+function pickPersonality(){ Enemy.personality = ['rusher','balanced','harasser'][ Round % 3 ]; }
 
-const AI = { timer: 1.0, surgeCD: 14, surgeT: 0, inSurge: false };
+const TYPES = ['Fighter','Interceptor','Bomber','Frigate','Drone'];
 
-// Read current ally/enemy composition (counts only — fast)
+// Enemy gets shorter type cooldowns (so it can “swarm” after saving)
+const ENEMY_CD_FACTOR = 0.66;
+const enemyTypeCD = { Fighter:0, Interceptor:0, Bomber:0, Frigate:0, Drone:0 };
+
+const AI = {
+  timer: 0.0,
+  thinkCD: 0.0,                  // how often we recompute (seconds)
+  lastSig: '',
+  inSurge:false, surgeCD:14, surgeT:0,
+};
+
+// Quick composition snapshot
 function compCounts(){
   const ally   = {Fighter:0,Interceptor:0,Bomber:0,Drone:0,Frigate:0};
   const enemy  = {Fighter:0,Interceptor:0,Bomber:0,Drone:0,Frigate:0};
   for (const s of ships){
-    if (s.team===TEAM.ALLY)  ally[s.type]   = (ally[s.type]||0)+1;
-    else                     enemy[s.type]  = (enemy[s.type]||0)+1;
+    if (s.team===TEAM.ALLY)  ally[s.type]++; else enemy[s.type]++;
   }
   return {ally, enemy};
 }
 
-// Cheap “combat power” weights (relative, not exact DPS; tuned for your kit)
+// Costs from BASE
+const TYPE_COST = Object.fromEntries(TYPES.map(t => [t, BASE[t].cost]));
+
+// Balanced base weights (Interceptor toned down a bit)
 const TYPE_WEIGHT = {
-  Fighter:     1.00,   // melee chip + body-block
-  Interceptor: 1.55,   // high RoF skirmisher
-  Bomber:      1.20,   // burst vs ships/flag
-  Frigate:     1.40,   // kiting ranged
-  Drone:       0.60    // healing/sustain, low direct DPS
+  Fighter:     1.05,
+  Interceptor: 1.30, // was 1.55
+  Bomber:      1.25,
+  Frigate:     1.45,
+  Drone:       0.65
 };
 
-// Cost map for convenience
-const TYPE_COST = {
-  Fighter: BASE.Fighter.cost,
-  Interceptor: BASE.Interceptor.cost,
-  Bomber: BASE.Bomber.cost,
-  Drone: BASE.Drone.cost,
-  Frigate: BASE.Frigate.cost
-};
-
-// Simple counter matrix (>1.0 = good vs that ally type)
+// Who counters whom (>1 good vs that ally type)
 const COUNTER = {
-  Fighter:     {Fighter:1.0, Interceptor:1.0, Bomber:1.15, Frigate:0.9,  Drone:1.1},
-  Interceptor: {Fighter:1.1, Interceptor:1.0, Bomber:1.25, Frigate:0.9,  Drone:1.0},
-  Bomber:      {Fighter:0.95,Interceptor:0.8, Bomber:1.0,  Frigate:1.15, Drone:1.0},
-  Frigate:     {Fighter:1.25,Interceptor:1.15,Bomber:0.9,  Frigate:1.0,  Drone:1.1},
-  Drone:       {Fighter:0.9, Interceptor:0.95,Bomber:1.0,  Frigate:0.95, Drone:1.0}
+  Fighter:     {Fighter:1.0,  Interceptor:1.0,  Bomber:1.15, Frigate:0.95, Drone:1.1},
+  Interceptor: {Fighter:1.05, Interceptor:1.0,  Bomber:1.25, Frigate:0.95, Drone:1.0},
+  Bomber:      {Fighter:0.95, Interceptor:0.85, Bomber:1.0,  Frigate:1.10, Drone:1.0},
+  Frigate:     {Fighter:1.20, Interceptor:1.10, Bomber:0.95, Frigate:1.0,  Drone:1.1},
+  Drone:       {Fighter:0.9,  Interceptor:0.95, Bomber:1.0,  Frigate:0.95, Drone:1.0}
 };
 
-// Evaluate a hypothetical composition after adding one extra unit to each side.
-// Positive score favors ENEMY (the AI). Higher = AI should like it.
-function evaluateAfterAdd(baseAlly, baseEnemy, addAllyType, addEnemyType){
-  // Copy counts
-  const ally  = {...baseAlly};
-  const enemy = {...baseEnemy};
-  if (addAllyType)  ally[addAllyType]  = (ally[addAllyType]||0) + 1;
-  if (addEnemyType) enemy[addEnemyType]= (enemy[addEnemyType]||0) + 1;
+// Soft diversity (penalize over-represented types)
+function diversityPenalty(counts){
+  // λ * sum(count^1.6)
+  const λ = 0.12;
+  let p = 0;
+  for (const t of TYPES) p += Math.pow(counts[t]||0, 1.6);
+  return λ * p;
+}
 
-  // Aggregate raw power
+// Light synergy: screens + heals help bombers/fragiles
+function synergyBonus(counts){
+  let b = 0;
+  // Fighter screen helps Bombers push
+  b += 0.05 * Math.min(counts.Fighter||0, counts.Bomber||0);
+  // Drones help everything (cap a bit)
+  const d = Math.min(3, counts.Drone||0);
+  b += 0.06 * d * ((counts.Fighter||0)+(counts.Interceptor||0)+(counts.Bomber||0)+(counts.Frigate||0)) / 12;
+  // Frigate + Drone sustain line
+  b += 0.05 * Math.min(counts.Frigate||0, d);
+  return b;
+}
+
+// Heuristic value of a (ally, enemy) mix. Positive = ENEMY advantage.
+function scoreMix(Ally, EnemyMix, ctx){
+  // raw power
   let allyRaw=0, enemyRaw=0;
-  for (const t in ally)  allyRaw  += (ally[t]  * TYPE_WEIGHT[t]);
-  for (const t in enemy) enemyRaw += (enemy[t] * TYPE_WEIGHT[t]);
+  for (const t of TYPES){ allyRaw  += (Ally[t]||0)  * TYPE_WEIGHT[t];
+                          enemyRaw += (EnemyMix[t]||0)* TYPE_WEIGHT[t]; }
 
-  // Counter effects (how well enemy mix preys on ally mix, and vice versa)
+  // counters
   let enemyVsAlly=0, allyVsEnemy=0;
-  for (const et in enemy){
-    for (const at in ally){
-      const pairs = Math.min(enemy[et], ally[at]); // coarse overlap
+  for (const et of TYPES){
+    for (const at of TYPES){
+      const pairs = Math.min(EnemyMix[et]||0, Ally[at]||0);
       if (pairs>0){
-        enemyVsAlly += pairs * (COUNTER[et][at] - 1.0); // bonus above neutral
+        enemyVsAlly += pairs * (COUNTER[et][at] - 1.0);
         allyVsEnemy += pairs * (COUNTER[at][et] - 1.0);
       }
     }
   }
 
-  // Economy efficiency (power per cost) — reward cheap strong picks
-  const econEnemy = addEnemyType ? (TYPE_WEIGHT[addEnemyType]/TYPE_COST[addEnemyType]) : 0;
-  const econAlly  = addAllyType  ? (TYPE_WEIGHT[addAllyType] /TYPE_COST[addAllyType])  : 0;
+  // synergy & diversity
+  const synE = synergyBonus(EnemyMix) - diversityPenalty(EnemyMix);
+  const synA = synergyBonus(Ally)     - diversityPenalty(Ally);
 
-  // Boss present? Favor anti-swarm ranged (Frigate/Interceptor) a bit to keep field alive
-  const bossBiasEnemy = bossActive && (addEnemyType==='Frigate' || addEnemyType==='Interceptor') ? 0.1 : 0;
-  const bossBiasAlly  = bossActive && (addAllyType==='Frigate'  || addAllyType==='Interceptor') ? 0.1 : 0;
+  // energy float (who can escalate soon)
+  const econ = 0.06 * ((ctx.eE || 0) - (ctx.eA || 0));
 
-  // Final score (weights tuned to feel responsive but not spiky)
-  const enemyScore =
-      (enemyRaw - allyRaw) * 0.9
-    + (enemyVsAlly - allyVsEnemy) * 0.6
-    + (econEnemy - econAlly) * 0.8
-    + bossBiasEnemy - bossBiasAlly;
+  // boss bias: during boss, value ranged/sustain a bit more
+  const bossBias =
+    (bossActive ? 0.12*((EnemyMix.Frigate||0)+(EnemyMix.Interceptor||0)) - 0.06*(EnemyMix.Fighter||0)
+                : 0);
 
-  return enemyScore;
+  return (enemyRaw - allyRaw)*0.9
+       + (enemyVsAlly - allyVsEnemy)*0.6
+       + (synE - synA)
+       + econ
+       + bossBias;
 }
 
-// Which types can each side afford right now
-function affordableTypes(energy, bias=1.0){
-  const out = [];
-  for (const t of ['Fighter','Interceptor','Bomber','Frigate','Drone']){
-    const need = TYPE_COST[t] * bias;
-    if (energy >= need) out.push(t);
-  }
-  return out;
+// State for planning
+function sigOfCounts(c){ return TYPES.map(t=>c[t]||0).join(','); }
+
+function snapshotState(){
+  const {ally, enemy} = compCounts();
+  return {
+    A: {...ally},
+    E: {...enemy},
+    eA: Player.energy,
+    eE: Enemy.energy,
+    cdA: {...typeCooldown},                      // player’s real cds
+    cdE: {...enemyTypeCD},                       // enemy cds
+  };
 }
 
-// Min–Max (depth 2): Enemy picks a type; Player picks best reply; Enemy maximizes the resulting score.
-// Alpha–beta kept trivial since branching is tiny.
-function chooseEnemySpawn_MinMax(){
-  const {ally: A0, enemy: E0} = compCounts();
+function stepRegen(st, dt){
+  st.eA = Math.min(Player.energyMax, st.eA + Player.energyRegen * dt);
+  st.eE = Math.min(Enemy.energyMax,  st.eE + Enemy.energyRegen  * dt);
+  for (const t of TYPES){ st.cdA[t] = Math.max(0, st.cdA[t]-dt); st.cdE[t] = Math.max(0, st.cdE[t]-dt); }
+}
 
-  const enemyOpts  = affordableTypes(Enemy.energy, (Enemy.difficultyBias||1.0));
-  if (enemyOpts.length===0) return null;
+function canSpawnSide(st, type, side){
+  const cost = TYPE_COST[type];
+  if (side==='E') return st.eE >= cost && st.cdE[type]<=0;
+  else            return st.eA >= cost && st.cdA[type]<=0;
+}
+function doSpawnSide(st, type, side){
+  const cost = TYPE_COST[type];
+  if (side==='E'){
+    st.eE -= cost; st.E[type]=(st.E[type]||0)+1; st.cdE[type] = (typeCDLen[type]||0.6)*ENEMY_CD_FACTOR;
+  } else {
+    st.eA -= cost; st.A[type]=(st.A[type]||0)+1; st.cdA[type] = (typeCDLen[type]||0.6);
+  }
+}
 
-  // Limit branching for perf: keep up to 4 best *heuristic* enemy options
-  enemyOpts.sort((a,b)=>{
-    const sa = evaluateAfterAdd(A0,E0,null,a);
-    const sb = evaluateAfterAdd(A0,E0,null,b);
-    return sb - sa;
-  });
-  const enemyTop = enemyOpts.slice(0,4);
+// Move generator (includes WAIT)
+function genMoves(st, side){
+  const moves = ['WAIT'];
+  const budget = side==='E' ? st.eE : st.eA;
+  const cds    = side==='E' ? st.cdE : st.cdA;
+  for (const t of TYPES){
+    if (budget >= TYPE_COST[t] && cds[t]<=0) moves.push(t);
+  }
+  // Order by marginal value (rough)
+  if (side==='E'){
+    moves.sort((ma,mb)=>{
+      const va = (ma==='WAIT') ? 0 : scoreMix(st.A, {...st.E, [ma]:(st.E[ma]||0)+1}, st) - scoreMix(st.A, st.E, st);
+      const vb = (mb==='WAIT') ? 0 : scoreMix(st.A, {...st.E, [mb]:(st.E[mb]||0)+1}, st) - scoreMix(st.A, st.E, st);
+      return vb - va;
+    });
+  }
+  return moves.slice(0, 5); // beam width
+}
 
-  const playerOpts = affordableTypes(Player.energy, 1.0);
-  // If player can’t reply, treat as null reply.
-  const playerTop = (playerOpts.length>0 ? playerOpts : [null]).slice(0,4);
-
-  let bestType = enemyTop[0], bestVal = -Infinity;
-
-  for (const eType of enemyTop){
-    // Player chooses reply to MINIMIZE the enemy’s advantage.
-    let worstForEnemy = +Infinity;
-
-    for (const pType of playerTop){
-      const val = evaluateAfterAdd(A0,E0,pType,eType);
-      if (val < worstForEnemy) worstForEnemy = val;
-    }
-
-    if (worstForEnemy > bestVal){
-      bestVal = worstForEnemy;
-      bestType = eType;
-    }
+// Minimax with tiny horizon and alpha-beta
+function minimax(st, depth, horizonTime, turn, alpha, beta){
+  // horizonTime ticks down by step; when <=0 or depth==0, evaluate
+  if (depth===0 || horizonTime<=0){
+    return { val: scoreMix(st.A, st.E, st), first:null };
   }
 
-  return bestType;
+  const STEP = 0.5; // seconds per ply
+  if (turn==='E'){ // maximizing
+    let best = { val:-Infinity, first:null };
+    const moves = genMoves(st,'E');
+    for (const mv of moves){
+      const ns = {
+        A:{...st.A}, E:{...st.E},
+        eA:st.eA, eE:st.eE,
+        cdA:{...st.cdA}, cdE:{...st.cdE}
+      };
+      if (mv!=='WAIT') doSpawnSide(ns, mv, 'E');
+      stepRegen(ns, STEP);
+      const out = minimax(ns, depth-1, horizonTime-STEP, 'A', alpha, beta);
+      const val = out.val;
+      if (val > best.val){ best = { val, first: (best.first??mv) || mv }; }
+      alpha = Math.max(alpha, val);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else { // player turn (minimizing)
+    let best = { val:+Infinity, first:null };
+    const moves = genMoves(st,'A');
+    for (const mv of moves){
+      const ns = {
+        A:{...st.A}, E:{...st.E},
+        eA:st.eA, eE:st.eE,
+        cdA:{...st.cdA}, cdE:{...st.cdE}
+      };
+      if (mv!=='WAIT') doSpawnSide(ns, mv, 'A');
+      stepRegen(ns, STEP);
+      const out = minimax(ns, depth-1, horizonTime-STEP, 'E', alpha, beta);
+      const val = out.val;
+      if (val < best.val){ best = { val, first: (best.first??mv) || mv }; }
+      beta = Math.min(beta, val);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+// Decide next enemy action with planning & “save for swarm” behavior
+function decideEnemyAction(){
+  const st = snapshotState();
+
+  // Recompute plan signature (composition + integer energies) to avoid thrash
+  const sig = `${sigOfCounts(st.A)}|${sigOfCounts(st.E)}|${(st.eA|0)}|${(st.eE|0)}|${bossActive?'B':'-'}`;
+  const needThink = (AI.lastSig !== sig);
+  if (needThink) AI.lastSig = sig;
+
+  // Lookahead depth/horizon tuned for speed
+  const DEPTH   = 6;     // plies
+  const HORIZON = 3.0;   // seconds
+
+  const res = minimax(st, DEPTH, HORIZON, 'E', -Infinity, +Infinity);
+  const pick = res.first; // could be 'WAIT' or a type
+
+  // “Save for swarm”: if best is WAIT but we’re close to affording a high-impact unit, keep waiting.
+  if (pick==='WAIT'){
+    // Heuristic: if Frigate or Bomber would flip the eval by enough, wait.
+    const needFrig = TYPE_COST.Frigate;
+    const needBomb = TYPE_COST.Bomber;
+    const canSoonFrig = (Enemy.energy + Enemy.energyRegen*1.0 >= needFrig && enemyTypeCD.Frigate<=0);
+    const canSoonBomb = (Enemy.energy + Enemy.energyRegen*1.0 >= needBomb && enemyTypeCD.Bomber<=0);
+    if (canSoonFrig || canSoonBomb) return null; // wait
+  }
+
+  // During surge, try to burst up to 2 units (different types to keep diversity)
+  if (AI.inSurge && pick && pick!=='WAIT'){
+    const spawned = [];
+    const trySpawn = (t)=>{
+      const need = TYPE_COST[t] * (Enemy.difficultyBias||1.0);
+      if (Enemy.energy >= need && enemyTypeCD[t]<=0){
+        Enemy.energy -= need;
+        spawnShip(t, TEAM.ENEMY);
+        enemyTypeCD[t] = (typeCDLen[t]||0.6)*ENEMY_CD_FACTOR;
+        spawned.push(t);
+      }
+    };
+    trySpawn(pick);
+    // second pick: pick best different type by marginal
+    let best2 = null, bestGain = -1e9;
+    for (const t of TYPES){
+      if (t===pick) continue;
+      if (Enemy.energy < TYPE_COST[t] || enemyTypeCD[t]>0) continue;
+      const cur = scoreMix(st.A, st.E, st);
+      const gain = scoreMix(st.A, {...st.E, [t]:(st.E[t]||0)+1}, st) - cur;
+      if (gain>bestGain){ bestGain=gain; best2=t; }
+    }
+    if (best2) trySpawn(best2);
+    return spawned.length ? 'burst' : null;
+  }
+
+  // Normal single spawn
+  if (pick && pick!=='WAIT'){
+    const need = TYPE_COST[pick] * (Enemy.difficultyBias||1.0);
+    if (Enemy.energy >= need && enemyTypeCD[pick]<=0){
+      Enemy.energy -= need;
+      spawnShip(pick, TEAM.ENEMY);
+      enemyTypeCD[pick] = (typeCDLen[pick]||0.6)*ENEMY_CD_FACTOR;
+      return pick;
+    }
+  }
+  return null; // wait
 }
 
 function aiTick(dt){
-  // Timers
-  AI.timer  -= dt;
-  AI.surgeCD -= dt;
+  // update type CDs
+  for (const t of TYPES) enemyTypeCD[t] = Math.max(0, enemyTypeCD[t]-dt);
 
-  // Surge windows (burst spending + slight fire-rate bump)
-  if (!AI.inSurge && AI.surgeCD <= 0){
-    AI.inSurge = true;
-    AI.surgeT  = (Settings.difficulty===2? 3.6 : 3.0);
+  // surge schedule (enemy bursts)
+  AI.surgeCD -= dt;
+  if (!AI.inSurge && AI.surgeCD<=0){
+    AI.inSurge = true; AI.surgeT = (Settings.difficulty===2? 3.6 : 3.0);
     AI.surgeCD = (Settings.difficulty===2? 16  : 20);
     toast('⚠ Enemy surge!');
   }
-  if (AI.inSurge){
-    AI.surgeT -= dt;
-    if (AI.surgeT <= 0) AI.inSurge = false;
-  }
+  if (AI.inSurge){ AI.surgeT -= dt; if (AI.surgeT<=0) AI.inSurge=false; }
 
-  // Decision cadence by difficulty (slowed slightly during boss so it’s readable)
-  const bossFactor = bossActive ? 1.15 : 1.0;
-  const decLo = (Settings.difficulty===2? 0.55 : Settings.difficulty===1? 0.80 : 1.00);
-  const decHi = (Settings.difficulty===2? 0.85 : Settings.difficulty===1? 1.00 : 1.20);
+  // cadence: enemy thinks faster than before (esp. on Hard)
+  const bossFactor = bossActive ? 1.1 : 1.0;
+  const decLo = (Settings.difficulty===2? 0.28 : Settings.difficulty===1? 0.40 : 0.55);
+  const decHi = (Settings.difficulty===2? 0.45 : Settings.difficulty===1? 0.60 : 0.80);
 
-  if (AI.timer <= 0){
-    AI.timer = rand(decLo, decHi) * (AI.inSurge? 0.65 : 1.0) * bossFactor;
+  AI.timer -= dt;
+  if (AI.timer<=0){
+    AI.timer = rand(decLo,decHi) * bossFactor * (AI.inSurge? 0.7 : 1.0);
 
-    // Population safety: don’t overflow the field
+    // population cap safety
     const enemyCount = ships.reduce((n,s)=> n + (s.team===TEAM.ENEMY), 0);
-    if (enemyCount > 28) return;
+    if (enemyCount > 32) return;
 
-    // Pick with Min–Max
-    let pick = chooseEnemySpawn_MinMax();
+    // occasionally force a rethink even if signature didn’t change
+    AI.thinkCD -= dt;
+    if (AI.thinkCD<=0) { AI.lastSig = ''; AI.thinkCD = 0.8; }
 
-    // If no pick (can’t afford any), bail
-    if (!pick) return;
-
-    const need = TYPE_COST[pick] * (Enemy.difficultyBias||1.0);
-    if (Enemy.energy < need){
-      // If surge is active, try cheapest affordable instead
-      if (AI.inSurge){
-        const cheap = affordableTypes(Enemy.energy, (Enemy.difficultyBias||1.0)).sort((a,b)=>TYPE_COST[a]-TYPE_COST[b])[0];
-        if (!cheap) return;
-        pick = cheap;
-      } else {
-        return;
-      }
-    }
-
-    Enemy.energy -= TYPE_COST[pick] * (Enemy.difficultyBias||1.0);
-    spawnShip(pick, TEAM.ENEMY);
-
-    if (AI.inSurge){
-      for (const s of ships) if (s.team===TEAM.ENEMY) s.cd = Math.max(0, s.cd - 0.25);
-    }
+    decideEnemyAction();
   }
 }
 
@@ -1313,7 +1425,7 @@ function aiTick(dt){
     Enemy.hpMax  = Player.hpMax; Enemy.hp = Enemy.hpMax;
     Flag.ally.hpMax=Player.hpMax; Flag.ally.hp=Player.hp;
     Flag.enemy.hpMax=Enemy.hpMax; Flag.enemy.hp=Enemy.hp;
-    Player.energy=0; Enemy.energy=0;
+    Player.energy=Player.energyMax; Enemy.energy=Enemy.energyMax;
     AI.timer=1.0; Enemy.specialUsed=false; pickPersonality();
     setHPHUD(); setEnergyHUD(); setRoundHUD(); setMoneyHUD(); setBossHUD();
   }
@@ -1420,7 +1532,7 @@ function aiTick(dt){
     const v=Number(b.dataset.diff); Settings.difficulty=v; b.classList.add(v===2?'danger':'primary');
     Enemy.energyRegen = (v===2?1.3:(v===1?1.15:1.0)) * 3;
 
-    Enemy.difficultyBias = v===2?1.15:(v===0?0.9:1.0);
+    Enemy.difficultyBias = v===2?2.55:(v===0?1.9:2.3);
     Player.hpMax = v===0?1200:(v===2?1050:1100); Player.hp=Player.hpMax;
     setHPHUD(); toast(`Difficulty: ${['Easy','Normal','Hard'][v]}`);
   }));
