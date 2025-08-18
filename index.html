@@ -155,15 +155,17 @@
 <!-- Game Over -->
 <div id="gameover" class="overlay">
   <div class="modal">
-    <div id="resultTitle" class="title">Victory</div>
-    <div id="statsText" style="margin:6px 0 14px 0;text-align:center">...</div>
-    <div class="row" style="justify-content:space-around; gap:8px">
-      <button id="spendBtn" class="btn">Spend Credits</button>
-      <button id="menuBtn" class="btn danger">Menu</button>
+    <div class="title" id="resultTitle">Battle Complete</div>
+    <div class="list" style="margin:8px 0">
+      <div id="statsText" class="badge">Stats…</div>
+    </div>
+    <div class="row">
+      <button id="spendBtn" class="btn primary">⛭ Spend Credits</button>
+      <button id="nextBtn" class="btn">▶ Next Round</button>
+      <button id="quitBtn" class="btn danger">⎋ Quit to Title</button>
     </div>
   </div>
 </div>
-
 
 <div class="corner">
   <button id="speedBtn" class="btn small">⏩ Speed</button>
@@ -206,17 +208,19 @@
   const Settings = { particles:true, bloom:true, shake:true, sfx:true, difficulty:1 };
   const Speed = { mult:1, steps:[1,1.5,2] };
   const Player = {
-    hpMax:1100, hp:1100, energy:0, energyMax:10, energyRegen:2.0, credits:0, // faster default regen
+    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:3.5, credits:0, // faster default regen
     upgrades:{
       dmg:0, hp:0, erg:0, cap:0, spd:0, armor:0, ram:0, projspd:0, range:0, squad:0, droneR:0, droneT:0, pd:0, aura:0, bossB:0, salvage:0
     }
   };
   const Enemy = {
-    hpMax:1100, hp:1100, energy:0, energyMax:10, energyRegen:1.15,
+    hpMax:15100, hp:15100, energy:30, energyMax:30, energyRegen:4.15,
     difficultyBias:1.0,
     specialUsed:false, personality:'balanced'
   };
   let Round=1, roundTime=0, nextBossIn=0, bossActive=false;
+  let bossCleared=false;
+
   let paused=false, playing=false, gameOver=false;
   let LastOutcome = null; // 'win' | 'loss' | null
 
@@ -229,7 +233,15 @@
   function setMoneyHUD(){ $('moneyVal').textContent=Player.credits; $('shopCredits').textContent=Player.credits; }
   function setRoundHUD(){ $('roundVal').textContent=Round; }
   function setTimeHUD(){ const m=Math.floor(roundTime/60), s=Math.floor(roundTime%60).toString().padStart(2,'0'); $('timeVal').textContent=`${m}:${s}`; }
-  function setBossHUD(){ $('bossBadge').textContent = bossActive? 'ACTIVE' : (nextBossIn>0? `${Math.ceil(nextBossIn)}s` : '—'); }
+  function setBossHUD(){
+    if (bossActive && boss){
+      const p = Math.max(0, Math.floor((boss.hp / boss.hpMax) * 100));
+      $('bossBadge').textContent = `HP ${p}%`;
+    } else {
+      $('bossBadge').textContent = (nextBossIn>0? `${Math.ceil(nextBossIn)}s` : '—');
+    }
+  }
+
   function setSpeedHUD(){ $('speedChip').textContent = Speed.mult.toFixed(2).replace(/\.00$/,'')+'×'; }
 
   // ---------- Background (stars) ----------
@@ -287,12 +299,13 @@
   const TYPE_ACCENT={ Fighter:"#70d7ff", Interceptor:"#6a8bff", Bomber:"#8be0ff", Drone:"#50ffa8", Frigate:"#ffd36b" };
 
   const BASE = {
-    Fighter:{hp:56, dmg:6, spd:120.9, turn:3.2, cost:2,  range:0, mass:2.0,  r:11},
-    Interceptor:{hp:62, dmg:8, spd:200.1, turn:2.6, cost:3,  range:140, mass:1.2, r:12},
-    Bomber:{hp:240,dmg:30,spd:100.3, turn:1.8, cost:4,  range:80,  mass:2.2, r:14, boom:100, boomD:40},
-    Drone:{hp:70, dmg:5, spd:100.6, turn:2.2, cost:3,  range:110, mass:1.1, r:12, heal:12},
-    Frigate:{hp:90, dmg:16,spd:100.6, turn:2.0, cost:5,  range:260, mass:1.6, r:13, proj:5},
+    Fighter:     {hp:56,  dmg:6,  spd:120.9, turn:3.2, cost:2, range:0,   mass:2.0, r:11, prefer:10,  sep:24},
+    Interceptor: {hp:62,  dmg:8,  spd:200.1, turn:2.6, cost:3, range:140, mass:1.2, r:12, prefer:95,  sep:24},
+    Bomber:      {hp:210, dmg:30, spd:100.3, turn:1.8, cost:4, range:80,  mass:2.2, r:14, prefer:140, sep:26},
+    Drone:       {hp:70,  dmg:5,  spd:100.6, turn:2.2, cost:3, range:110, mass:1.1, r:12, prefer:160, sep:28, heal:12},
+    Frigate:     {hp:90,  dmg:16, spd:100.6, turn:2.0, cost:5, range:260, mass:1.6, r:13, prefer:210, sep:30},
   };
+
   const ORDER = ['Fighter','Interceptor','Bomber','Drone','Frigate'];
   // --- Collision tuning ---
   const MIN_REL_HIT = 0.6;         // ignore super-soft bumps
@@ -343,8 +356,8 @@
   function upgCost(key){ const base = UPG.find(u=>u.key===key).base; const lvl=Player.upgrades[key]||0; return Math.floor(base*Math.pow(1.25,lvl)); }
 
   function applyStats(){
-    Player.energyMax = 10 + (Player.upgrades.cap||0)*2;
-    Player.energyRegen = 2.0*(1+(Player.upgrades.erg||0)*0.15); // faster base (2.0)
+    Player.energyMax = 30 + (Player.upgrades.cap||0)*2;
+    Player.energyRegen = 6.0*(1+(Player.upgrades.erg||0)*0.15); // faster base (2.0)
     Player.hpMax = Math.floor(1100*(1+(Player.upgrades.hp||0)*0.12));
     Player.hp = clamp(Player.hp,0,Player.hpMax);
   }
@@ -353,6 +366,8 @@
   const Selected={type:'Fighter'};
   const typeCooldown = {Fighter:0, Interceptor:0, Bomber:0, Drone:0, Frigate:0};
   const typeCDLen = {Fighter:0.2, Interceptor:0.5, Bomber:1.0, Drone:1.0, Frigate:1.2};
+  for (const k in typeCDLen) typeCDLen[k] /= 3;  // global 3× faster spawns
+
   let concurrentLimit=1;
   function canAfford(type){ return Player.energy >= BASE[type].cost; }
 
@@ -365,25 +380,23 @@
     // cooldown gate for single spawn; allow batch to bypass initial gate
     if(team===TEAM.ALLY && typeCooldown[type]>0 && !Modes.maxDeploy) return false;
 
-    const cost=BASE[type].cost;
-    const capBase = 10; // base field cap
-    concurrentLimit = 1 + (Player.upgrades.squad||0);
-    const cap = capBase + concurrentLimit*4;
-
     const countAllies = () => ships.filter(s=>s.team===TEAM.ALLY).length;
 
     if(team===TEAM.ALLY && !canAfford(type)) return false;
-    if(team===TEAM.ALLY && countAllies()>=cap) return false;
+    // no cap anymore
+    const cost = BASE[type].cost;  // <— needed by both paths below
+
 
     // Batch deploy in max mode
     if(team===TEAM.ALLY && Modes.maxDeploy){
       let spawned=0;
-      while(Player.energy>=cost && countAllies()<cap){
+      while(Player.energy>=cost){                // no cap check
         Player.energy-=cost;
         spawnShip(type,team);
         spawned++;
-        if(spawned>50) break; // safety
+        if(spawned>400) break; // relaxed safety
       }
+
       setEnergyHUD();
       typeCooldown[type]=typeCDLen[type]; // standard cooldown after burst
       return spawned>0;
@@ -420,6 +433,13 @@
     };
 
     s.hpMax=s.hp;
+    // personality from BASE
+    s.prefer = b.prefer || 90;   // desired distance to target
+    s.sep    = b.sep || 26;      // separation radius from allies
+
+    // drones should heal, not count as "ranged shooter"
+    if (type === 'Drone') s.ranged = false;
+
     ships.push(s);
     spark(s.x,s.y,TEAM_COLOR(team),10,1.2);
     beep(team===TEAM.ALLY?540:500,.05,.05,'sawtooth');
@@ -451,7 +471,10 @@
         if(ttk<best){ best=ttk; tgt=o; }
       }
     }
-    const foeF = (s.team===TEAM.ALLY? Flag.enemy : Flag.ally);
+    const foeF = (s.team===TEAM.ALLY
+      ? (bossActive && boss ? boss : Flag.enemy)
+      : Flag.ally);
+
     const dxF = foeF.x - s.x, dyF = foeF.y - s.y, dF = Math.hypot(dxF,dyF);
     if(!tgt || dF<best*0.9) tgt = foeF;
 
@@ -461,16 +484,18 @@
     if(tgt){
       const tx = ('w' in tgt) ? tgt.x : tgt.x, ty = ('w' in tgt) ? tgt.y : tgt.y;
       let dx = tx - s.x, dy = ty - s.y, d = Math.hypot(dx,dy)||1;
-      const arrive = (s.type === 'Fighter' ? 24 : 80);
+      const arrive = s.prefer || 90;
       const m = (d<arrive)? lerp(0, s.maxSpd, d/arrive) : s.maxSpd;
       desireX += (dx/d) * m; desireY += (dy/d) * m;
     }
 
     // KITE for frigates
-    if(s.type==='Frigate' && tgt && !('w' in tgt)){
+    if (s.type==='Frigate' && tgt && !('w' in tgt)){
       const dx = tgt.x - s.x, dy = tgt.y - s.y, d=Math.hypot(dx,dy)||1;
-      if(d < s.range*0.75){ desireX -= (dx/d)*s.maxSpd*.8; desireY -= (dy/d)*s.maxSpd*.8; }
+      const keep = Math.max(s.range*0.75, s.prefer);
+      if (d < keep){ desireX -= (dx/d)*s.maxSpd*.8; desireY -= (dy/d)*s.maxSpd*.8; }
     }
+
 
     // SEPARATION
     // SEPARATION (only from allies so we can stick to enemies)
@@ -478,7 +503,7 @@
     for(const o of ships){
       if(o===s || o.team!==s.team) continue; // <— only allies
       const dx=o.x-s.x, dy=o.y-s.y, d=Math.hypot(dx,dy)||1;
-      if(d<26){ sepX -= dx/d; sepY -= dy/d; count++; } // a bit tighter than 28
+      if (d < s.sep) { sepX -= dx/d; sepY -= dy/d; count++; } // a bit tighter than 28
     }
     if(count>0){ const k=1.2*s.maxSpd; desireX += (sepX/count)*k; desireY += (sepY/count)*k; }
 
@@ -593,7 +618,7 @@
         }}
         if(best){
           heals.push({x1:s.x,y1:s.y,x2:best.x,y2:best.y,t:0});
-          best.hp = Math.min(best.hpMax, best.hp + s.healPS*dt);
+          best.hp = Math.min(best.hpMax, best.hp + s.healPS*2.5*dt); // 1.5× stronger
           if(Math.random()<.2) spark(best.x,best.y,'#aef',2,.3);
         }
       }
@@ -673,19 +698,56 @@
       }
 
       // ship with enemy flagship
-      const foeF = (a.team===TEAM.ALLY? Flag.enemy : Flag.ally);
-      const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
-      if(rectCircle(rx,ry,foeF.w,foeF.h,a.x,a.y,a.r)){
-        const dir = Math.sign(a.x-foeF.x)||1;
-        a.vx += dir*60*dt; a.x += dir*14;
+      // ship with enemy flagship
+// During boss: allies ignore enemy flagship (they fight the boss).
+if (!bossActive || a.team !== TEAM.ALLY) {
+    const foeF = (a.team===TEAM.ALLY? Flag.enemy : Flag.ally);
+    const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
+    if(rectCircle(rx,ry,foeF.w,foeF.h,a.x,a.y,a.r)){
+      const dir = Math.sign(a.x-foeF.x)||1;
+      a.vx += dir*60*dt; a.x += dir*14;
 
-        // toned-down flagship collision so Fighters don't evaporate on graze
-        const vsFlagScale = (a.type==='Fighter' ? 0.35 : 0.8);
-        applyDamage(foeF, a.mass*8 * vsFlagScale, a.team);
-        applyDamage(a,    a.mass*9 * vsFlagScale, foeF.team);
+      const vsFlagScale = (a.type==='Fighter' ? 0.35 : 0.8);
+      applyDamage(foeF, a.mass*8 * vsFlagScale, a.team);
+      applyDamage(a,    a.mass*9 * vsFlagScale, foeF.team);
 
-        spark(a.x,a.y,TEAM_COLOR(a.team),8,1.2); addShake(4);
-      }
+      spark(a.x,a.y,TEAM_COLOR(a.team),8,1.2); addShake(4);
+    }
+  }
+
+      // --- ship ↔ boss (circle-circle)
+if (boss && a.team === TEAM.ALLY){
+  const dx = a.x - boss.x,  dy = a.y - boss.y;
+  const dist = Math.hypot(dx,dy);
+  const minD = a.r + boss.r;
+  if (dist < minD){
+    const nx = dx/(dist||1), ny = dy/(dist||1);
+    const overlap = (minD - dist);
+    a.x += nx*overlap*0.85; a.y += ny*overlap*0.85;
+    boss.x -= nx*overlap*0.15; boss.y -= ny*overlap*0.15;
+
+    const rel = Math.abs(a.vx*nx + a.vy*ny);
+    const J = Math.min(50, rel * (a.mass+3));
+    a.vx += nx * (J / Math.max(0.6,a.mass));
+    a.vy += ny * (J / Math.max(0.6,a.mass));
+
+    applyDamage(a,    5 + a.mass*1.5, TEAM.ENEMY);
+    applyDamage(boss, 3 + a.mass*1.2, a.team);
+
+    spark(a.x,a.y,'#ff9ab3',8,1.2);
+    addShake(3);
+  }
+}
+
+// --- boss ↔ ally flagship
+if (boss){
+  const rxA = Flag.ally.x-Flag.ally.w/2, ryA = Flag.ally.y-Flag.ally.h/2;
+  if (rectCircle(rxA, ryA, Flag.ally.w, Flag.ally.h, boss.x, boss.y, boss.r)){
+    applyDamage(Flag.ally, 10, TEAM.ENEMY);
+    boss.x += 6*dt*60; // gentle nudge
+  }
+}
+
     }
 
     // shots
@@ -701,12 +763,27 @@
         }
       }}
 
-      // flagship hit
-      if(!hit){
-        const foeF = (b.team===TEAM.ALLY? Flag.enemy : Flag.ally);
-        const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
-        if(rectCircle(rx,ry,foeF.w,foeF.h,b.x,b.y,6)){ hit=true; applyDamage(foeF, Math.floor(b.dmg*1.2), b.team); addShake(4); }
+        // boss hit
+      if(!hit && boss){
+        if(Math.hypot(b.x-boss.x, b.y-boss.y) < boss.r + b.r){
+          applyDamage(boss, b.dmg, b.team);
+          hit=true;
+          spark(b.x,b.y,'#ff9ab3',6,1.0);
+          addShake(1);
+        }
       }
+
+
+      // flagship hit
+    // During boss: ally bullets ignore enemy flagship (they hit boss instead).
+    if (!hit && (!bossActive || b.team !== TEAM.ALLY)) {
+      const foeF = (b.team===TEAM.ALLY? Flag.enemy : Flag.ally);
+      const rx=foeF.x-foeF.w/2, ry=foeF.y-foeF.h/2;
+      if(rectCircle(rx,ry,foeF.w,foeF.h,b.x,b.y,6)){
+        hit=true; applyDamage(foeF, Math.floor(b.dmg*1.2), b.team); addShake(4);
+      }
+    }
+
 
       if(hit){ shots.splice(i,1); }
       else if(b.x<-40||b.x>cv.width+40||b.y<-40||b.y>cv.height+40){ shots.splice(i,1); }
@@ -714,33 +791,187 @@
   }
 
   // ---------- Boss ----------
-  function spawnBoss(){
-    bossActive=true; Enemy.specialUsed=false;
-    boss={ x:cv.width-200, y:cv.height*0.5, vx:-30, vy:0, w:36, h:220, hp:1400*(1+Round*0.15), hpMax:0, shield:0, cd:3, team:TEAM.ENEMY };
-    boss.hpMax=boss.hp;
-    toast('⚠ Boss incoming!');
+  // ---------- Boss (ALIEN UFO) ----------
+// ---------- Boss ----------
+// ---------- Boss (Alien Mind: stationary, collidable circle, no minions) ----------
+// ---------- Boss (Alien Mind: circular, visible, attacks) ----------
+function spawnBoss(){
+  bossActive = true;
+  Enemy.specialUsed = false;
+
+  // clear existing enemy ships
+  for (let i = ships.length-1; i>=0; i--){
+    if (ships[i].team === TEAM.ENEMY) ships.splice(i,1);
   }
-  function updateBoss(dt){
-    if(!boss) return;
-    boss.x += boss.vx*dt;
-    boss.cd -= dt;
-    if(boss.cd<=0){
-      boss.cd = 6;
-      for(const s of ships){ if(s.team===TEAM.ALLY && Math.abs(s.x-boss.x)<280){ applyDamage(s,18, TEAM.ENEMY); s.vx -= 50; } }
-      addShake(6); ringBlast(boss.x,boss.y,'#ff9ab3',12);
-      for(let i=0;i<2;i++) spawnShip(Math.random()<.5?'Interceptor':'Frigate', TEAM.ENEMY);
+
+  // spawn at enemy flagship’s spot
+  boss = {
+    type: 'eye',
+    x: Flag.enemy.x,
+    y: Flag.enemy.y,
+    r: 60,
+    hp: Math.floor(2000*(1+Round*0.25)),
+    hpMax: 0,
+    team: TEAM.ENEMY,
+    t: 0,
+    phase: 1,
+    phaseTimer: 0,
+    orbitEyes: [],
+    sweepAng: 0
+  };
+  boss.hpMax = boss.hp;
+
+  toast('⚠ The All-Seeing Eye awakens…');
+  setBossHUD();
+}
+
+
+
+function bossBolt(angle, speed=6.0, dmg=14, life=3.0){
+  const v = speed;
+  shots.push({
+    x: boss.x + Math.cos(angle)*(boss.r+4),
+    y: boss.y + Math.sin(angle)*(boss.r+4),
+    vx: Math.cos(angle)*v,
+    vy: Math.sin(angle)*v,
+    team: TEAM.ENEMY,
+    dmg, life, r:3
+  });
+  spark(boss.x, boss.y, '#ff9ab3', 6, 1.0);
+}
+
+function updateBoss(dt){
+  if (!boss) return;
+  boss.t += dt;
+  boss.phaseTimer += dt;
+
+  // phase progression
+  if (boss.phase===1 && boss.hp < boss.hpMax*0.66){
+    boss.phase=2; boss.phaseTimer=0; boss.orbitEyes=[];
+    for (let i=0;i<4;i++){
+      boss.orbitEyes.push({ang:i*(TAU/4), dist:100, cd:0});
     }
-    if(boss.x - boss.w/2 < Flag.ally.x + Flag.ally.w/2){ Player.hp=0; }
+    toast('The Eye summons its kin!');
   }
-  function drawBoss(){
-    if(!boss) return;
-    const rx=boss.x-boss.w/2, ry=boss.y-boss.h/2;
-    if(Settings.bloom){ ctx.globalAlpha=.25; ctx.fillStyle='rgba(255,77,122,.25)'; ctx.fillRect(rx-8,ry-8,boss.w+16,boss.h+16); ctx.globalAlpha=1; }
-    ctx.strokeStyle='#ff4d7a'; ctx.lineWidth=3*DPR;
-    ctx.strokeRect(rx,ry,boss.w,boss.h);
-    ctx.fillStyle='rgba(255,255,255,.06)'; ctx.fillRect(rx-10,ry-10,boss.w+20,6);
-    ctx.fillStyle='#ff4d7a'; ctx.fillRect(rx-10,ry-10,(boss.w+20)*(boss.hp/boss.hpMax),6);
+  if (boss.phase===2 && boss.hp < boss.hpMax*0.33){
+    boss.phase=3; boss.phaseTimer=0;
+    toast('A void portal opens!');
   }
+
+  // subtle hover
+  boss.y += Math.sin(boss.t*0.6)*0.3*dt*60;
+
+  // PHASE 1: sweeping gaze beam
+  if (boss.phase===1){
+    boss.sweepAng += 0.4*dt;
+    if (boss.phaseTimer>2){
+      boss.phaseTimer=0;
+      addShake(5);
+      // sweeping beam line
+      const a=boss.sweepAng;
+      const dx=Math.cos(a), dy=Math.sin(a);
+      for (const s of ships){
+        if (s.team!==TEAM.ALLY) continue;
+        const relx=s.x-boss.x, rely=s.y-boss.y;
+        const proj=(relx*dx+rely*dy);
+        if (proj>0 && Math.abs(relx*dy-rely*dx)<30){
+          applyDamage(s, 30*dt, TEAM.ENEMY);
+          if (Math.random()<0.2) spark(s.x,s.y,'#ff9ab3',5,0.8);
+        }
+      }
+    }
+  }
+
+  // PHASE 2: orbiting eyes shoot
+  if (boss.phase===2){
+    for (const o of boss.orbitEyes){
+      o.ang += dt*0.8;
+      o.cd -= dt;
+      if (o.cd<=0){
+        o.cd=2.5;
+        const tx=Flag.ally.x, ty=Flag.ally.y;
+        const ang=Math.atan2(ty-boss.y, tx-boss.x);
+        bossBolt(ang, 7.0, 16, 3.0);
+      }
+    }
+  }
+
+  // PHASE 3: portal spawns minions
+  if (boss.phase===3){
+    if (boss.phaseTimer>5){
+      boss.phaseTimer=0;
+      for (let i=0;i<3;i++){
+        spawnShip(Math.random()<0.5?'Interceptor':'Fighter', TEAM.ENEMY);
+      }
+      addShake(6);
+    }
+  }
+
+  // damage ally flagship if overlapping
+  const rx=Flag.ally.x-Flag.ally.w/2, ry=Flag.ally.y-Flag.ally.h/2;
+  if (rectCircle(rx,ry,Flag.ally.w,Flag.ally.h,boss.x,boss.y,boss.r)){
+    applyDamage(Flag.ally,10*dt,TEAM.ENEMY);
+  }
+}
+
+
+function drawBoss(){
+  if (!boss) return;
+  const t=boss.t, r=boss.r;
+
+  ctx.save();
+  ctx.translate(boss.x,boss.y);
+
+  // aura
+  ctx.globalAlpha=0.25;
+  ctx.fillStyle='rgba(255,77,122,0.3)';
+  ctx.beginPath(); ctx.arc(0,0,r+30,0,TAU); ctx.fill();
+  ctx.globalAlpha=1;
+
+  // main eye
+  ctx.strokeStyle='#ff4d7a';
+  ctx.lineWidth=3*DPR;
+  ctx.beginPath(); ctx.arc(0,0,r,0,TAU); ctx.stroke();
+
+  ctx.fillStyle='#ffe7ff';
+  ctx.beginPath(); ctx.arc(0,0,r*0.5+Math.sin(t*2)*2,0,TAU); ctx.fill();
+
+  // glowing iris
+  ctx.strokeStyle='#ffd6f0';
+  ctx.beginPath(); ctx.arc(0,0,r*0.35,0,TAU); ctx.stroke();
+
+  // runes
+  const N=8;
+  for (let i=0;i<N;i++){
+    const a=t*0.8+i*TAU/N;
+    const rr=r+10+Math.sin(t*3+i)*3;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*(rr-6),Math.sin(a)*(rr-6));
+    ctx.lineTo(Math.cos(a)*rr,Math.sin(a)*rr);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // orbiting eyes
+  if (boss.phase>=2){
+    for (const o of boss.orbitEyes){
+      const x=boss.x+Math.cos(o.ang)*o.dist;
+      const y=boss.y+Math.sin(o.ang)*o.dist;
+      ctx.strokeStyle='#ff9ab3'; ctx.lineWidth=2*DPR;
+      ctx.beginPath(); ctx.arc(x,y,14,0,TAU); ctx.stroke();
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(x,y,6,0,TAU); ctx.fill();
+    }
+  }
+
+  // HP arc
+  const frac=Math.max(0,boss.hp/boss.hpMax);
+  ctx.strokeStyle='#ff4d7a'; ctx.lineWidth=4*DPR;
+  ctx.beginPath(); ctx.arc(boss.x,boss.y,r+22,-Math.PI*0.8,-Math.PI*0.8+Math.PI*1.6*frac); ctx.stroke();
+}
+
+
 
   // ---------- Flagships ----------
   function drawFlag(fs, color){
@@ -772,6 +1003,8 @@
     return counts;
   }
   function aiTick(dt){
+    if (bossActive) return;
+
     Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + Enemy.energyRegen*dt);
     AI.timer -= dt;
     if(AI.timer<=0){
@@ -837,7 +1070,7 @@
     resetBattle();
   }
   function resetBattle(){
-    ships.length=0; shots.length=0; parts.length=0; heals.length=0; boss=null; bossActive=false;
+    ships.length=0; shots.length=0; parts.length=0; heals.length=0; boss=null; bossActive=false; bossCleared=false;
     Player.hpMax = Math.floor(1100*(1+(Player.upgrades.hp||0)*0.12)); Player.hp = Player.hpMax;
     Enemy.hpMax  = Player.hpMax; Enemy.hp = Enemy.hpMax;
     Flag.ally.hpMax=Player.hpMax; Flag.ally.hp=Player.hp;
@@ -1053,7 +1286,14 @@
      // NEW: remember last result
     LastOutcome = v ? 'win' : 'loss';
 
-    
+    const nextBtn = $('nextBtn');
+    if(v){
+      nextBtn.textContent = '▶ Next Round';
+      nextBtn.dataset.mode = 'next';
+    }else{
+      nextBtn.textContent = '↺ Retry';
+      nextBtn.dataset.mode = 'retry';
+    }
     show('gameover',true);
   }
 
@@ -1073,14 +1313,35 @@
         roundTime += dt; setTimeHUD();
         Player.energy = Math.min(Player.energyMax, Player.energy + Player.energyRegen*dt); setEnergyHUD();
         Enemy.energy = Math.min(Enemy.energyMax, Enemy.energy + Enemy.energyRegen*dt);
-        if(Round%5===0 && !bossActive){
+        if (Round % 5 === 0 && !bossActive && !bossCleared) {
           nextBossIn = Math.max(0, nextBossIn - dt); setBossHUD();
           if(nextBossIn<=0) spawnBoss();
         }
         updateShips(dt);
         collisions(dt);
         aiTick(dt);
-        if(bossActive){ updateBoss(dt); if(boss && boss.hp<=0){ boss=null; bossActive=false; toast('Boss defeated!'); } }
+        if (bossActive){
+  updateBoss(dt);
+  if (boss && boss.hp<=0){
+    boss = null;
+    bossActive = false
+    bossCleared=true;
+    victory(true);   // end the level immediately
+    return;
+
+    toast('Boss defeated!');
+    // Reset enemy flagship health bar after boss is gone
+    Enemy.hp = Enemy.hpMax;
+    setBossHUD();
+  } else {
+    // Mirror enemy HP to boss while active
+    Enemy.hp = boss.hp;
+    Enemy.hpMax = boss.hpMax;
+    setBossHUD();
+  }
+}
+
+
         // Mirror pools to flags (no overwrite of damage thanks to applyDamage redirect)
         Flag.ally.hp = Player.hp; Flag.ally.hpMax=Player.hpMax;
         Flag.enemy.hp = Enemy.hp; Flag.enemy.hpMax=Enemy.hpMax;
@@ -1098,7 +1359,8 @@
     ctx.strokeStyle='rgba(255,255,255,.06)'; ctx.beginPath(); ctx.moveTo(cv.width/2,0); ctx.lineTo(cv.width/2,cv.height); ctx.stroke();
 
     drawFlag(Flag.ally, '#00faff');
-    drawFlag(Flag.enemy, '#ff4d7a');
+    if (!bossActive) drawFlag(Flag.enemy, '#ff4d7a');
+
     if(bossActive) drawBoss();
 
     for(const s of ships) drawShip(s);
