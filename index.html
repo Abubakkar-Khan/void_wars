@@ -296,35 +296,24 @@
   const TYPE_ACCENT={ Fighter:"#70d7ff", Interceptor:"#6a8bff", Bomber:"#8be0ff", Drone:"#50ffa8", Frigate:"#ffd36b" };
 
   const BASE = {
-    // Cheap brawler. Stronger melee DPS but fragile. No ranged.
-    Fighter: {
-      hp: 70, dmg: 6, spd: 135, turn: 3.3, cost: 2, range: 0,
-      mass: 1.8, r: 11, prefer: 12, sep: 24
-    },
+    // Screen & brawl. Cheap, sturdy, real melee bite.
+    Fighter:     {hp:80,  dmg:10, spd:135,  turn:3.3, cost:2, range:0,   mass:1.8, r:11, prefer:12,  sep:24},
 
-    // Fast skirmisher. Good sustained DPS at mid-range, but not oppressive.
-    Interceptor: {
-      hp: 60, dmg: 7, spd: 200, turn: 2.6, cost: 3, range: 150,
-      mass: 1.2, r: 12, prefer: 95, sep: 24
-    },
+    // Skirmisher. Fast ROF, decent range, glassier than Fighter.
+    Interceptor: {hp:60,  dmg:9,  spd:210,  turn:2.6, cost:3, range:160, mass:1.2, r:12, prefer:110, sep:24,
+                  rate:0.45, pspd:6.2},
 
-    // Slow hitter. Highest per-unit damage, tuned for ~5.5 DPS per cost.
-    Bomber: {
-      hp: 150, dmg: 22, spd: 95, turn: 1.9, cost: 4, range: 110,
-      mass: 2.2, r: 14, prefer: 135, sep: 26
-    },
+    // Line breaker. Slow ROF, chunky hits, death boom (area denial).
+    Bomber:      {hp:190, dmg:28, spd:95,   turn:1.8, cost:4, range:90,  mass:2.2, r:14, prefer:150, sep:26,
+                  rate:1.00, pspd:5.0, boom:40, boomD:12},
 
-    // Healer/support. No real DPS; better range and speed so it can reach allies.
-    Drone: {
-      hp: 70, dmg: 5, spd: 115, turn: 2.2, cost: 3, range: 130,
-      mass: 1.1, r: 12, prefer: 160, sep: 28, heal: 10
-    },
+    // Healer. Keeps teams alive; slight HP bump; longer med range.
+    Drone:       {hp:85,  dmg:5,  spd:105,  turn:2.2, cost:3, range:130, mass:1.1, r:12, prefer:170, sep:28,
+                  heal:14},
 
-    // Backline gun. Solid DPS for the price, long range, kites by design.
-    Frigate: {
-      hp: 110, dmg: 18, spd: 100, turn: 2.0, cost: 5, range: 260,
-      mass: 1.6, r: 13, prefer: 210, sep: 30
-    },
+    // Backline artillery. Longest range, solid ROF, pricier.
+    Frigate:     {hp:120, dmg:20, spd:98,   turn:2.0, cost:5, range:280, mass:1.7, r:13, prefer:230, sep:30,
+                  rate:0.70, pspd:6.6},
   };
 
 
@@ -340,7 +329,7 @@
     Frigate: 0.65
   };
 
-  const FIGHTER_MELEE_DPS_MULT = 0.5;   // ~ (1.2 hit) / (0.22s) ≈ 5.45× dmg/sec
+  const FIGHTER_MELEE_DPS_MULT = 0.6;   // ~ (1.2 hit) / (0.22s) ≈ 5.45× dmg/sec
   const FIGHTER_MELEE_PAD = 2;
   
   
@@ -449,6 +438,9 @@
       dmg:Math.floor(b.dmg * (1+(Player.upgrades.dmg||0)*0.10) * aura),
       healPS: b.heal ? b.heal*(1+(Player.upgrades.droneT||0)*0.20) : 0,
       boom: b.boom||0, boomD:b.boomD||0, proj:b.proj||0,
+      rate: b.rate ?? 1.0,
+      pspd: b.pspd ?? 5.0,
+
 
       // NEW
       meleeCD: 0,
@@ -629,9 +621,10 @@
         const dy = (('w' in tgt)? tgt.y - s.y : tgt.y - s.y);
         const dist = Math.hypot(dx,dy);
         if(dist < s.range && s.cd<=0){
-          s.cd = (s.type==='Frigate'? .75 : (s.type==='Interceptor'? .5 : 1.0));
-          fire(s, s.x+dx, s.y+dy, s.type==='Frigate'? 6.2 : 5.0);
+          s.cd = s.rate;
+          fire(s, s.x+dx, s.y+dy, s.pspd);
         }
+
       } else if(s.type==='Drone'){
         let best=null, br=Infinity;
         const r = (BASE.Drone.range*(1+(Player.upgrades.droneR||0)*0.15));
